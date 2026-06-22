@@ -8,6 +8,7 @@ import ProductsPage from './pages/ProductsPage';
 import SalesPage from './pages/SalesPage';
 import InsightsPage from './pages/InsightsPage';
 import ActivityLogPage from './pages/ActivityLogPage';
+import ReportsPage from './pages/ReportsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -27,6 +28,11 @@ export default function App() {
           <Route path="sales" element={<SalesPage />} />
           <Route path="insights" element={<InsightsPage />} />
           <Route path="activities" element={<ActivityLogPage />} />
+          <Route path="reports" element={
+            <ProtectedRoute roles={['owner']}>
+              <ReportsPage />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

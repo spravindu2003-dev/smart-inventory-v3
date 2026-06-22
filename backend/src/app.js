@@ -23,5 +23,6 @@ app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/activities', require('./routes/activityRoutes'));
 app.use('/api/sales', require('./routes/saleRoutes'));
 app.use('/api/insights', require('./routes/insightsRoutes'));
+app.use('/api/reports', require('./routes/reportsRoutes'));
 
 module.exports = app;
