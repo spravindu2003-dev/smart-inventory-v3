@@ -12,6 +12,9 @@ exports.summary = async (_req, res) => {
     unitsSoldAgg,
     topSellingAgg,
     recentSales,
+    lowStockItemsCount,
+    outOfStockItemsCount,
+    expiredProductsCount,
   ] = await Promise.all([
     prisma.product.count(),
     prisma.product.aggregate({ _sum: { stock: true } }),
@@ -40,6 +43,11 @@ exports.summary = async (_req, res) => {
           include: { product: { select: { id: true, name: true, sku: true } } },
         },
       },
+    }),
+    prisma.product.count({ where: { stock: { gte: 1, lte: 10 } } }),
+    prisma.product.count({ where: { stock: 0 } }),
+    prisma.product.count({
+      where: { expiryDate: { lt: new Date() }, NOT: { expiryDate: null } },
     }),
   ]);
 
@@ -72,6 +80,9 @@ exports.summary = async (_req, res) => {
     totalUnitsSold: unitsSoldAgg._sum.quantity || 0,
     topSellingProducts,
     recentSales,
+    lowStockItems: lowStockItemsCount,
+    outOfStockItems: outOfStockItemsCount,
+    expiredProducts: expiredProductsCount,
   });
 };
 

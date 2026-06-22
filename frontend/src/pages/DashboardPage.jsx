@@ -94,6 +94,18 @@ export default function DashboardPage() {
           <span className="insight-card__value">{summary.lowStockProducts}</span>
           <span className="insight-card__label">Low Stock Items</span>
         </div>
+        <div className="insight-card insight-card--warn">
+          <span className="insight-card__value">{summary.lowStockItems}</span>
+          <span className="insight-card__label">Low Stock (1-10)</span>
+        </div>
+        <div className="insight-card insight-card--danger">
+          <span className="insight-card__value">{summary.outOfStockItems}</span>
+          <span className="insight-card__label">Out of Stock</span>
+        </div>
+        <div className="insight-card insight-card--danger">
+          <span className="insight-card__value">{summary.expiredProducts}</span>
+          <span className="insight-card__label">Expired Products</span>
+        </div>
       </div>
 
       <div className="dashboard-grid">
