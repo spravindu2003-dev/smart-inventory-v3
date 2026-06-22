@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getData } from '../api/responseHandler';
+import { getData, safeArray } from '../api/safeResponse';
 import * as productsApi from '../api/products';
 
 const emptyForm = { name: '', sku: '', price: '', stock: '', category: '', description: '', expiryDate: '' };
@@ -26,8 +26,8 @@ export default function ProductsPage() {
     setLoading(true);
     setError('');
     try {
-      const data = await productsApi.getProducts();
-      setProducts(getData(data));
+      const res = await productsApi.getProducts();
+      setProducts(getData(res));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load products');
     } finally {
@@ -144,14 +144,14 @@ export default function ProductsPage() {
             </tr>
           </thead>
           <tbody>
-            {products.length === 0 && (
+            {safeArray(products).length === 0 && (
               <tr>
                 <td colSpan={canWrite ? 7 : 6} className="table__empty">
                   No products yet
                 </td>
               </tr>
             )}
-            {products.map((p) => (
+            {safeArray(products).map((p) => (
               <tr key={p.id}>
                 <td className="table__sku">{p.sku}</td>
                 <td>{p.name}</td>

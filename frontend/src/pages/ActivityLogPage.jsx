@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getData } from '../api/responseHandler';
+import { getData, getPagination, safeArray } from '../api/safeResponse';
 import { getActivities, getActivitySummary } from '../api/activities';
 
 const actionLabels = {
@@ -42,8 +42,8 @@ export default function ActivityLogPage() {
 
   const fetchSummary = useCallback(async () => {
     try {
-      const data = await getActivitySummary();
-      setSummary(data);
+      const res = await getActivitySummary();
+      setSummary(res.data);
     } catch {
       /* silent */
     }
@@ -54,9 +54,9 @@ export default function ActivityLogPage() {
     setError('');
     try {
       const params = buildParams(p);
-      const data = await getActivities(params);
-      setActivities(getData(data));
-      setPagination(data.pagination);
+      const res = await getActivities(params);
+      setActivities(getData(res));
+      setPagination(getPagination(res));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load activities');
     } finally {
@@ -171,12 +171,12 @@ export default function ActivityLogPage() {
                   <div className="spinner" style={{ margin: '0 auto' }} />
                 </td>
               </tr>
-            ) : activities.length === 0 ? (
+            ) : safeArray(activities).length === 0 ? (
               <tr>
                 <td colSpan={4} className="table__empty">No activities recorded</td>
               </tr>
             ) : (
-              activities.map((a) => (
+              safeArray(activities).map((a) => (
                 <tr key={a.id}>
                   <td>
                     <span className={`badge badge--action badge--${a.action.toLowerCase()}`}>

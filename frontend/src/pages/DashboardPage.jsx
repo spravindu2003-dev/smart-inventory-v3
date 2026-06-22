@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { safeArray } from '../api/safeResponse';
 import { getSummary } from '../api/insights';
 
 function timeAgo(dateStr) {
@@ -21,8 +22,8 @@ export default function DashboardPage() {
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getSummary();
-      setSummary(data);
+      const res = await getSummary();
+      setSummary(res.data);
     } catch {
       setSummary(null);
     } finally {
@@ -111,7 +112,7 @@ export default function DashboardPage() {
       <div className="dashboard-grid">
         <div>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Recent Sales</h3>
-          {summary.recentSales && summary.recentSales.length > 0 ? (
+          {safeArray(summary?.recentSales).length > 0 ? (
             <div className="table-wrapper">
               <table className="table">
                 <thead>
@@ -124,7 +125,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {summary.recentSales.map((s) => (
+                  {safeArray(summary.recentSales).map((s) => (
                     <tr key={s.id}>
                       <td><strong>#{s.id}</strong></td>
                       <td>${Number(s.total).toFixed(2)}</td>
@@ -143,7 +144,7 @@ export default function DashboardPage() {
 
         <div>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Top Products</h3>
-          {summary.topSellingProducts && summary.topSellingProducts.length > 0 ? (
+          {safeArray(summary?.topSellingProducts).length > 0 ? (
             <div className="table-wrapper">
               <table className="table">
                 <thead>
@@ -154,7 +155,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {summary.topSellingProducts.map((p) => (
+                  {safeArray(summary.topSellingProducts).map((p) => (
                     <tr key={p.id}>
                       <td>{p.name}</td>
                       <td className="table__sku">{p.sku}</td>

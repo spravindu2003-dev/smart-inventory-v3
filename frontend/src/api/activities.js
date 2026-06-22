@@ -9,8 +9,8 @@ export const getActivities = (params = {}) => {
   if (params.search) q.set('search', params.search);
   if (params.startDate) q.set('startDate', params.startDate);
   if (params.endDate) q.set('endDate', params.endDate);
-  return api.get(`/activities?${q.toString()}`).then((r) => r.data);
+  return api.get(`/activities?${q.toString()}`);
 };
 
 export const getActivitySummary = () =>
-  api.get('/activities/summary').then((r) => r.data);
+  api.get('/activities/summary');

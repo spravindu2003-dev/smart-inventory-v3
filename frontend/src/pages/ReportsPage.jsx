@@ -3,20 +3,11 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { getData } from '../api/responseHandler';
+import { getData, safeArray } from '../api/safeResponse';
 import * as reportsApi from '../api/reports';
 
 const STOCK_COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#9ca3af'];
 const CAT_COLORS = ['#4f46e5', '#ec4899', '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6', '#e11d48', '#a855f7'];
-
-function formatDate(d) {
-  const date = new Date(d);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function toDollar(v) {
-  return `$${Number(v).toFixed(2)}`;
-}
 
 const actionLabels = {
   LOGIN_SUCCESS: 'Login',
@@ -28,6 +19,15 @@ const actionLabels = {
   REMOVE_PRODUCT: 'Removed Product',
   SALE_CREATED: 'Sale Created',
 };
+
+function formatDate(d) {
+  const date = new Date(d);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function toDollar(v) {
+  return `$${Number(v).toFixed(2)}`;
+}
 
 export default function ReportsPage() {
   const [data, setData] = useState({
@@ -56,13 +56,13 @@ export default function ReportsPage() {
           reportsApi.getActivityDistribution(),
         ]);
       setData({
-        revenueTrend: revenue.trend || [],
-        salesTrend: sales.trend || [],
+        revenueTrend: revenue.data?.trend || [],
+        salesTrend: sales.data?.trend || [],
         topProducts: getData(products),
-        categoryDist: categories.distribution || [],
-        stockDist: stock,
-        insights,
-        activityDist: activity.distribution || [],
+        categoryDist: categories.data?.distribution || [],
+        stockDist: stock.data,
+        insights: insights.data,
+        activityDist: activity.data?.distribution || [],
         error: '',
         loading: false,
       });
@@ -111,15 +111,20 @@ export default function ReportsPage() {
       ].filter((d) => d.value > 0)
     : [];
 
-  const categoryPie = (categoryDist || []).map((d) => ({
+  const categoryPie = safeArray(categoryDist).map((d) => ({
     name: d.category,
     value: d.count,
   }));
 
-  const activityPie = (activityDist || []).map((d) => ({
+  const activityPie = safeArray(activityDist).map((d) => ({
     name: actionLabels[d.action] || d.action,
     value: d.count,
   }));
+
+  const safeTopProducts = safeArray(topProducts);
+
+  const safeRevenueTrend = safeArray(revenueTrend);
+  const safeSalesTrend = safeArray(salesTrend);
 
   return (
     <div>
@@ -130,7 +135,7 @@ export default function ReportsPage() {
         <div className="rpt-card">
           <h3 className="rpt-card__title">Revenue Trend (Last 7 Days)</h3>
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={revenueTrend}>
+            <LineChart data={safeRevenueTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
@@ -138,14 +143,14 @@ export default function ReportsPage() {
               <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
-          {revenueTrend.length === 0 && <p className="rpt-card__empty">No revenue data</p>}
+          {safeRevenueTrend.length === 0 && <p className="rpt-card__empty">No revenue data</p>}
         </div>
 
         {/* 2. Sales Count */}
         <div className="rpt-card">
           <h3 className="rpt-card__title">Sales Count (Last 7 Days)</h3>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={salesTrend}>
+            <BarChart data={safeSalesTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 12 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
@@ -153,15 +158,15 @@ export default function ReportsPage() {
               <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-          {salesTrend.length === 0 && <p className="rpt-card__empty">No sales data</p>}
+          {safeSalesTrend.length === 0 && <p className="rpt-card__empty">No sales data</p>}
         </div>
 
         {/* 3. Top Products */}
         <div className="rpt-card rpt-card--wide">
           <h3 className="rpt-card__title">Top Selling Products</h3>
-          {topProducts.length > 0 ? (
+          {safeTopProducts.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topProducts} layout="vertical" margin={{ left: 20 }}>
+              <BarChart data={safeTopProducts} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
                 <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
@@ -243,8 +248,8 @@ export default function ReportsPage() {
               <div className="rpt-insight">
                 <span className="rpt-insight__label">Low Stock Alerts</span>
                 <span className="rpt-insight__value">
-                  {insights.lowStockAlerts.length > 0
-                    ? insights.lowStockAlerts.map((p) => `${p.name} (${p.stock} left)`).join(', ')
+                  {safeArray(insights?.lowStockAlerts).length > 0
+                    ? safeArray(insights.lowStockAlerts).map((p) => `${p.name} (${p.stock} left)`).join(', ')
                     : 'All products well-stocked'}
                 </span>
               </div>

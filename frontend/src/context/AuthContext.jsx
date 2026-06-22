@@ -14,16 +14,16 @@ export function AuthProvider({ children }) {
       return;
     }
     getMe()
-      .then((data) => setUser(data.user))
+      .then((res) => setUser(res.data.user))
       .catch(() => localStorage.removeItem('token'))
       .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(async (email, password) => {
-    const data = await loginUser(email, password);
-    localStorage.setItem('token', data.token);
-    setUser(data.user);
-    return data;
+    const res = await loginUser(email, password);
+    localStorage.setItem('token', res.data.token);
+    setUser(res.data.user);
+    return res.data;
   }, []);
 
   const logout = useCallback(() => {

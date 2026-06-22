@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getData } from '../api/responseHandler';
+import { getData, safeArray } from '../api/safeResponse';
 import * as insightsApi from '../api/insights';
 
 export default function InsightsPage() {
@@ -17,12 +17,12 @@ export default function InsightsPage() {
     try {
       const [s, ms, ls, ls2, ds] = await Promise.all([
         insightsApi.getSummary(),
-        insightsApi.getMostSold().catch(() => ({ data: [] })),
-        insightsApi.getLeastSold().catch(() => ({ data: [] })),
+        insightsApi.getMostSold().catch(() => ({ data: { data: [] } })),
+        insightsApi.getLeastSold().catch(() => ({ data: { data: [] } })),
         insightsApi.getLowStock(),
-        insightsApi.getDeadStock().catch(() => ({ data: [] })),
+        insightsApi.getDeadStock().catch(() => ({ data: { data: [] } })),
       ]);
-      setSummary(s);
+      setSummary(s.data);
       setMostSold(getData(ms));
       setLeastSold(getData(ls));
       setLowStock(getData(ls2));
@@ -67,7 +67,7 @@ export default function InsightsPage() {
       {/* Most Sold */}
       <section className="insight-section">
         <h3>Most Sold Products</h3>
-        {mostSold.length === 0 ? (
+        {safeArray(mostSold).length === 0 ? (
           <p className="insight-empty">No sales data yet</p>
         ) : (
           <div className="table-wrapper">
@@ -81,7 +81,7 @@ export default function InsightsPage() {
                 </tr>
               </thead>
               <tbody>
-                {mostSold.map((p, i) => (
+                {safeArray(mostSold).map((p, i) => (
                   <tr key={p.id}>
                     <td>{i + 1}</td>
                     <td>{p.name}</td>
@@ -98,7 +98,7 @@ export default function InsightsPage() {
       {/* Least Sold */}
       <section className="insight-section">
         <h3>Least Sold Products</h3>
-        {leastSold.length === 0 ? (
+        {safeArray(leastSold).length === 0 ? (
           <p className="insight-empty">No sales data yet</p>
         ) : (
           <div className="table-wrapper">
@@ -112,7 +112,7 @@ export default function InsightsPage() {
                 </tr>
               </thead>
               <tbody>
-                {leastSold.map((p, i) => (
+                {safeArray(leastSold).map((p, i) => (
                   <tr key={p.id}>
                     <td>{i + 1}</td>
                     <td>{p.name}</td>
@@ -129,7 +129,7 @@ export default function InsightsPage() {
       {/* Low Stock */}
       <section className="insight-section">
         <h3>Low Stock Alerts ( &le; 10 )</h3>
-        {lowStock.length === 0 ? (
+        {safeArray(lowStock).length === 0 ? (
           <p className="insight-empty">All products are well stocked</p>
         ) : (
           <div className="table-wrapper">
@@ -143,7 +143,7 @@ export default function InsightsPage() {
                 </tr>
               </thead>
               <tbody>
-                {lowStock.map((p) => (
+                {safeArray(lowStock).map((p) => (
                   <tr key={p.id}>
                     <td>{p.name}</td>
                     <td className="table__sku">{p.sku}</td>
@@ -164,7 +164,7 @@ export default function InsightsPage() {
       {/* Dead Stock */}
       <section className="insight-section">
         <h3>Dead Stock (never sold)</h3>
-        {deadStock.length === 0 ? (
+        {safeArray(deadStock).length === 0 ? (
           <p className="insight-empty">No dead stock detected</p>
         ) : (
           <div className="table-wrapper">
@@ -178,7 +178,7 @@ export default function InsightsPage() {
                 </tr>
               </thead>
               <tbody>
-                {deadStock.map((p) => (
+                {safeArray(deadStock).map((p) => (
                   <tr key={p.id}>
                     <td>{p.name}</td>
                     <td className="table__sku">{p.sku}</td>

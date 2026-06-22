@@ -1,16 +1,16 @@
 import api from './client';
 
 export const getSummary = () =>
-  api.get('/insights/summary').then((r) => r.data);
+  api.get('/insights/summary');
 
 export const getMostSold = () =>
-  api.get('/insights/most-sold').then((r) => r.data);
+  api.get('/insights/most-sold');
 
 export const getLeastSold = () =>
-  api.get('/insights/least-sold').then((r) => r.data);
+  api.get('/insights/least-sold');
 
 export const getLowStock = () =>
-  api.get('/insights/low-stock').then((r) => r.data);
+  api.get('/insights/low-stock');
 
 export const getDeadStock = () =>
-  api.get('/insights/dead-stock').then((r) => r.data);
+  api.get('/insights/dead-stock');

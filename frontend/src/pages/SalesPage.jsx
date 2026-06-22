@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getData } from '../api/responseHandler';
+import { getData, safeArray } from '../api/safeResponse';
 import * as salesApi from '../api/sales';
 import * as productsApi from '../api/products';
 
@@ -23,8 +23,8 @@ export default function SalesPage() {
     setLoading(true);
     setError('');
     try {
-      const data = await salesApi.getSales();
-      setSales(getData(data));
+      const res = await salesApi.getSales();
+      setSales(getData(res));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load sales');
     } finally {
@@ -47,8 +47,8 @@ export default function SalesPage() {
     setCart([]);
     setModalOpen(true);
     try {
-      const data = await productsApi.getProducts();
-      setProducts(getData(data));
+      const res = await productsApi.getProducts();
+      setProducts(getData(res));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load products');
     }
@@ -110,8 +110,8 @@ export default function SalesPage() {
     setError('');
     try {
       const items = cart.map((c) => ({ productId: c.productId, quantity: c.quantity }));
-      const data = await salesApi.createSale(items);
-      setSuccess(`Sale #${data.sale.id} created successfully!`);
+      const res = await salesApi.createSale(items);
+      setSuccess(`Sale #${res.data.sale.id} created successfully!`);
       closeModal();
       await fetch();
     } catch (err) {
@@ -157,12 +157,12 @@ export default function SalesPage() {
             </tr>
           </thead>
           <tbody>
-            {sales.length === 0 && (
+            {safeArray(sales).length === 0 && (
               <tr>
                 <td colSpan={5} className="table__empty">No sales yet</td>
               </tr>
             )}
-            {sales.map((sale) => (
+            {safeArray(sales).map((sale) => (
               <tr key={sale.id}>
                 <td><strong>#{sale.id}</strong></td>
                 <td className="table__date">
@@ -180,7 +180,7 @@ export default function SalesPage() {
         </table>
       </div>
 
-      {sales.map((sale) => sale.items?.length > 0 && (
+      {safeArray(sales).map((sale) => sale.items?.length > 0 && (
         <div key={`items-${sale.id}`} className="sale-items">
           <div className="sale-items__header">
             Items for Sale #{sale.id}
@@ -223,7 +223,7 @@ export default function SalesPage() {
                   Product
                   <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
                     <option value="">-- Select --</option>
-                    {products.map((p) => (
+                    {safeArray(products).map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name} (${Number(p.price).toFixed(2)}, stock: {p.stock})
                       </option>
