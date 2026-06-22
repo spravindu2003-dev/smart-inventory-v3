@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getData } from '../api/responseHandler';
 import { getActivities, getActivitySummary } from '../api/activities';
 
 const actionLabels = {
@@ -54,7 +55,7 @@ export default function ActivityLogPage() {
     try {
       const params = buildParams(p);
       const data = await getActivities(params);
-      setActivities(data.activities);
+      setActivities(getData(data));
       setPagination(data.pagination);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load activities');
@@ -194,7 +195,7 @@ export default function ActivityLogPage() {
         </table>
       </div>
 
-      {pagination && pagination.pages > 1 && (
+      {pagination && pagination.totalPages > 1 && (
         <div className="pagination">
           <button
             className="btn btn--sm"
@@ -204,11 +205,11 @@ export default function ActivityLogPage() {
             Previous
           </button>
           <span className="pagination__info">
-            Page {pagination.page} of {pagination.pages}
+            Page {pagination.page} of {pagination.totalPages}
           </span>
           <button
             className="btn btn--sm"
-            disabled={page >= pagination.pages}
+            disabled={page >= pagination.totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
             Next

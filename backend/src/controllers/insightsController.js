@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const asyncHandler = require('../utils/asyncHandler');
 
 exports.summary = async (_req, res) => {
   const [
@@ -86,7 +87,11 @@ exports.summary = async (_req, res) => {
   });
 };
 
-exports.mostSold = async (_req, res) => {
+exports.mostSold = async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = (page - 1) * limit;
+
   const products = await prisma.product.findMany({
     include: {
       saleItems: { select: { quantity: true } },
@@ -101,13 +106,21 @@ exports.mostSold = async (_req, res) => {
       totalSold: p.saleItems.reduce((sum, si) => sum + si.quantity, 0),
     }))
     .filter((p) => p.totalSold > 0)
-    .sort((a, b) => b.totalSold - a.totalSold)
-    .slice(0, 10);
+    .sort((a, b) => b.totalSold - a.totalSold);
 
-  res.json({ products: withSales });
+  const total = withSales.length;
+
+  res.json({
+    data: withSales.slice(skip, skip + limit),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
 };
 
-exports.leastSold = async (_req, res) => {
+exports.leastSold = async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = (page - 1) * limit;
+
   const products = await prisma.product.findMany({
     include: {
       saleItems: { select: { quantity: true } },
@@ -122,10 +135,14 @@ exports.leastSold = async (_req, res) => {
       totalSold: p.saleItems.reduce((sum, si) => sum + si.quantity, 0),
     }))
     .filter((p) => p.totalSold > 0)
-    .sort((a, b) => a.totalSold - b.totalSold)
-    .slice(0, 10);
+    .sort((a, b) => a.totalSold - b.totalSold);
 
-  res.json({ products: withSales });
+  const total = withSales.length;
+
+  res.json({
+    data: withSales.slice(skip, skip + limit),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
 };
 
 exports.lowStock = async (_req, res) => {
@@ -134,7 +151,10 @@ exports.lowStock = async (_req, res) => {
     orderBy: { stock: 'asc' },
   });
 
-  res.json({ products });
+  res.json({
+    data: products,
+    pagination: { page: 1, limit: products.length, total: products.length, totalPages: 1 },
+  });
 };
 
 exports.deadStock = async (_req, res) => {
@@ -143,5 +163,12 @@ exports.deadStock = async (_req, res) => {
     orderBy: { createdAt: 'desc' },
   });
 
-  res.json({ products });
+  res.json({
+    data: products,
+    pagination: { page: 1, limit: products.length, total: products.length, totalPages: 1 },
+  });
 };
+
+Object.keys(module.exports).forEach((key) => {
+  module.exports[key] = asyncHandler(module.exports[key]);
+});

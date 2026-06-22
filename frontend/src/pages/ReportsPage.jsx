@@ -3,6 +3,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { getData } from '../api/responseHandler';
 import * as reportsApi from '../api/reports';
 
 const STOCK_COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#9ca3af'];
@@ -57,7 +58,7 @@ export default function ReportsPage() {
       setData({
         revenueTrend: revenue.trend || [],
         salesTrend: sales.trend || [],
-        topProducts: products.products || [],
+        topProducts: getData(products),
         categoryDist: categories.distribution || [],
         stockDist: stock,
         insights,

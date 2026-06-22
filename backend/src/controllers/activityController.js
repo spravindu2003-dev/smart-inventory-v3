@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const asyncHandler = require('../utils/asyncHandler');
 
 exports.getAll = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -41,8 +42,8 @@ exports.getAll = async (req, res) => {
   ]);
 
   res.json({
-    activities,
-    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    data: activities,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   });
 };
 
@@ -74,3 +75,7 @@ exports.summary = async (_req, res) => {
     salesActivitiesToday: salesToday,
   });
 };
+
+Object.keys(module.exports).forEach((key) => {
+  module.exports[key] = asyncHandler(module.exports[key]);
+});

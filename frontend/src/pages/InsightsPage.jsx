@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getData } from '../api/responseHandler';
 import * as insightsApi from '../api/insights';
 
 export default function InsightsPage() {
@@ -16,16 +17,16 @@ export default function InsightsPage() {
     try {
       const [s, ms, ls, ls2, ds] = await Promise.all([
         insightsApi.getSummary(),
-        insightsApi.getMostSold().catch(() => ({ products: [] })),
-        insightsApi.getLeastSold().catch(() => ({ products: [] })),
+        insightsApi.getMostSold().catch(() => ({ data: [] })),
+        insightsApi.getLeastSold().catch(() => ({ data: [] })),
         insightsApi.getLowStock(),
-        insightsApi.getDeadStock().catch(() => ({ products: [] })),
+        insightsApi.getDeadStock().catch(() => ({ data: [] })),
       ]);
       setSummary(s);
-      setMostSold(ms.products);
-      setLeastSold(ls.products);
-      setLowStock(ls2.products);
-      setDeadStock(ds.products);
+      setMostSold(getData(ms));
+      setLeastSold(getData(ls));
+      setLowStock(getData(ls2));
+      setDeadStock(getData(ds));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load insights');
     } finally {

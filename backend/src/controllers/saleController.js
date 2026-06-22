@@ -1,6 +1,7 @@
 const { Prisma } = require('@prisma/client');
 const prisma = require('../utils/prisma');
 const { logAction } = require('../utils/activityLogger');
+const asyncHandler = require('../utils/asyncHandler');
 
 exports.create = async (req, res) => {
   const { items } = req.body;
@@ -85,18 +86,30 @@ exports.create = async (req, res) => {
   res.status(201).json({ sale });
 };
 
-exports.getAll = async (_req, res) => {
-  const sales = await prisma.sale.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      user: { select: { id: true, username: true } },
-      items: {
-        include: { product: { select: { id: true, name: true, sku: true, price: true } } },
-      },
-    },
-  });
+exports.getAll = async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = (page - 1) * limit;
 
-  res.json({ sales });
+  const [sales, total] = await Promise.all([
+    prisma.sale.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      include: {
+        user: { select: { id: true, username: true } },
+        items: {
+          include: { product: { select: { id: true, name: true, sku: true, price: true } } },
+        },
+      },
+    }),
+    prisma.sale.count(),
+  ]);
+
+  res.json({
+    data: sales,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
 };
 
 exports.getById = async (req, res) => {
@@ -116,3 +129,7 @@ exports.getById = async (req, res) => {
 
   res.json({ sale });
 };
+
+Object.keys(module.exports).forEach((key) => {
+  module.exports[key] = asyncHandler(module.exports[key]);
+});

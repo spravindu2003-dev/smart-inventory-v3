@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getData } from '../api/responseHandler';
 import * as salesApi from '../api/sales';
 import * as productsApi from '../api/products';
 
@@ -23,7 +24,7 @@ export default function SalesPage() {
     setError('');
     try {
       const data = await salesApi.getSales();
-      setSales(data.sales);
+      setSales(getData(data));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load sales');
     } finally {
@@ -47,7 +48,7 @@ export default function SalesPage() {
     setModalOpen(true);
     try {
       const data = await productsApi.getProducts();
-      setProducts(data.products);
+      setProducts(getData(data));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load products');
     }

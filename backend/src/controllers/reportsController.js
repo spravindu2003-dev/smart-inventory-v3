@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const asyncHandler = require('../utils/asyncHandler');
 
 exports.salesTrend = async (req, res) => {
   const days = parseInt(req.query.days) || undefined;
@@ -40,7 +41,11 @@ exports.revenueTrend = async (req, res) => {
   res.json({ trend });
 };
 
-exports.topProducts = async (_req, res) => {
+exports.topProducts = async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = (page - 1) * limit;
+
   const products = await prisma.product.findMany({
     select: { id: true, name: true, sku: true, saleItems: { select: { quantity: true } } },
   });
@@ -53,10 +58,14 @@ exports.topProducts = async (_req, res) => {
       totalSold: p.saleItems.reduce((sum, si) => sum + si.quantity, 0),
     }))
     .filter((p) => p.totalSold > 0)
-    .sort((a, b) => b.totalSold - a.totalSold)
-    .slice(0, 10);
+    .sort((a, b) => b.totalSold - a.totalSold);
 
-  res.json({ products: ranked });
+  const total = ranked.length;
+
+  res.json({
+    data: ranked.slice(skip, skip + limit),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
 };
 
 exports.stockDistribution = async (_req, res) => {
@@ -166,3 +175,7 @@ exports.activityDistribution = async (_req, res) => {
 
   res.json({ distribution });
 };
+
+Object.keys(module.exports).forEach((key) => {
+  module.exports[key] = asyncHandler(module.exports[key]);
+});

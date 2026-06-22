@@ -1,12 +1,26 @@
 const { validationResult } = require('express-validator');
 const prisma = require('../utils/prisma');
 const { logAction } = require('../utils/activityLogger');
+const asyncHandler = require('../utils/asyncHandler');
 
-exports.getAll = async (_req, res) => {
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: 'desc' },
+exports.getAll = async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = (page - 1) * limit;
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.product.count(),
+  ]);
+
+  res.json({
+    data: products,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   });
-  res.json({ products });
 };
 
 exports.getById = async (req, res) => {
@@ -123,3 +137,7 @@ exports.softRemove = async (req, res) => {
 
   res.json({ product, message: 'Product removed from inventory' });
 };
+
+Object.keys(module.exports).forEach((key) => {
+  module.exports[key] = asyncHandler(module.exports[key]);
+});

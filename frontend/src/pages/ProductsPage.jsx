@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getData } from '../api/responseHandler';
 import * as productsApi from '../api/products';
 
 const emptyForm = { name: '', sku: '', price: '', stock: '', category: '', description: '', expiryDate: '' };
@@ -26,7 +27,7 @@ export default function ProductsPage() {
     setError('');
     try {
       const data = await productsApi.getProducts();
-      setProducts(data.products);
+      setProducts(getData(data));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load products');
     } finally {

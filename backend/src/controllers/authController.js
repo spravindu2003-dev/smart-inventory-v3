@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const prisma = require('../utils/prisma');
 const config = require('../config/env');
 const { logAction } = require('../utils/activityLogger');
+const asyncHandler = require('../utils/asyncHandler');
 
 function generateToken(user) {
   return jwt.sign(
@@ -91,3 +92,7 @@ exports.getMe = async (req, res) => {
 
   res.json({ user });
 };
+
+Object.keys(module.exports).forEach((key) => {
+  module.exports[key] = asyncHandler(module.exports[key]);
+});
