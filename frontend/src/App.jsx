@@ -28,11 +28,7 @@ export default function App() {
           <Route path="sales" element={<SalesPage />} />
           <Route path="insights" element={<InsightsPage />} />
           <Route path="activities" element={<ActivityLogPage />} />
-          <Route path="reports" element={
-            <ProtectedRoute roles={['owner']}>
-              <ReportsPage />
-            </ProtectedRoute>
-          } />
+          <Route path="reports" element={<ReportsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

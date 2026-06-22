@@ -7,7 +7,7 @@ const links = [
   { to: '/sales', label: 'Sales', icon: '\u2637', roles: ['owner', 'manager', 'cashier'] },
   { to: '/insights', label: 'Insights', icon: '\u2606', roles: ['owner', 'manager'] },
   { to: '/activities', label: 'Activity Log', icon: '\u2691', roles: ['owner', 'manager'] },
-  { to: '/reports', label: 'Reports', icon: '\u2261', roles: ['owner'] },
+  { to: '/reports', label: 'Reports', icon: '\u2261', roles: ['owner', 'manager', 'cashier'] },
 ];
 
 export default function Sidebar({ open, onClose }) {

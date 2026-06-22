@@ -830,38 +830,75 @@ body {
 
 /* ——— Reports ——— */
 
-.reports-grid {
+.rpt-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
 }
 
-.report-card {
+.rpt-card {
   background: var(--color-surface);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 1.25rem;
 }
 
-.report-card--wide {
+.rpt-card--wide {
   grid-column: 1 / -1;
 }
 
-.report-card__title {
+.rpt-card--activity {
+  margin-top: 1.25rem;
+}
+
+.rpt-card__title {
   font-size: 0.9375rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
 }
 
-.report-card__empty {
+.rpt-card__empty {
   color: var(--color-text-secondary);
   font-size: 0.875rem;
   text-align: center;
   padding: 3rem 0;
 }
 
+.rpt-insights {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.rpt-insight {
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  padding: 0.875rem 1rem;
+}
+
+.rpt-insight__label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.rpt-insight__value {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 @media (max-width: 768px) {
-  .reports-grid {
+  .rpt-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rpt-insights {
     grid-template-columns: 1fr;
   }
 }
