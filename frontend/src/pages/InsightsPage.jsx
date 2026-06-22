@@ -1,0 +1,195 @@
+import { useState, useEffect, useCallback } from 'react';
+import * as insightsApi from '../api/insights';
+
+export default function InsightsPage() {
+  const [summary, setSummary] = useState(null);
+  const [mostSold, setMostSold] = useState([]);
+  const [leastSold, setLeastSold] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
+  const [deadStock, setDeadStock] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [s, ms, ls, ls2, ds] = await Promise.all([
+        insightsApi.getSummary(),
+        insightsApi.getMostSold().catch(() => ({ products: [] })),
+        insightsApi.getLeastSold().catch(() => ({ products: [] })),
+        insightsApi.getLowStock(),
+        insightsApi.getDeadStock().catch(() => ({ products: [] })),
+      ]);
+      setSummary(s);
+      setMostSold(ms.products);
+      setLeastSold(ls.products);
+      setLowStock(ls2.products);
+      setDeadStock(ds.products);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load insights');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  if (loading) return <div className="page-center"><div className="spinner" /></div>;
+
+  return (
+    <div>
+      <h2 className="page-title">Insights</h2>
+
+      {error && <div className="alert alert--error">{error}</div>}
+
+      {/* Summary cards */}
+      <div className="insights-grid">
+        <div className="insight-card">
+          <span className="insight-card__value">{summary?.totalProducts ?? 0}</span>
+          <span className="insight-card__label">Total Products</span>
+        </div>
+        <div className="insight-card insight-card--warn">
+          <span className="insight-card__value">{summary?.lowStockProducts ?? 0}</span>
+          <span className="insight-card__label">Low Stock Alerts</span>
+        </div>
+        <div className="insight-card insight-card--danger">
+          <span className="insight-card__value">{summary?.deadStockProducts ?? 0}</span>
+          <span className="insight-card__label">Dead Stock</span>
+        </div>
+        <div className="insight-card">
+          <span className="insight-card__value">{summary?.activitiesToday ?? 0}</span>
+          <span className="insight-card__label">Activities Today</span>
+        </div>
+      </div>
+
+      {/* Most Sold */}
+      <section className="insight-section">
+        <h3>Most Sold Products</h3>
+        {mostSold.length === 0 ? (
+          <p className="insight-empty">No sales data yet</p>
+        ) : (
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Total Sold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mostSold.map((p, i) => (
+                  <tr key={p.id}>
+                    <td>{i + 1}</td>
+                    <td>{p.name}</td>
+                    <td className="table__sku">{p.sku}</td>
+                    <td><strong>{p.totalSold}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Least Sold */}
+      <section className="insight-section">
+        <h3>Least Sold Products</h3>
+        {leastSold.length === 0 ? (
+          <p className="insight-empty">No sales data yet</p>
+        ) : (
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Total Sold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leastSold.map((p, i) => (
+                  <tr key={p.id}>
+                    <td>{i + 1}</td>
+                    <td>{p.name}</td>
+                    <td className="table__sku">{p.sku}</td>
+                    <td>{p.totalSold}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Low Stock */}
+      <section className="insight-section">
+        <h3>Low Stock Alerts ( &le; 10 )</h3>
+        {lowStock.length === 0 ? (
+          <p className="insight-empty">All products are well stocked</p>
+        ) : (
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Stock</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lowStock.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.name}</td>
+                    <td className="table__sku">{p.sku}</td>
+                    <td>{p.stock}</td>
+                    <td>
+                      <span className={`badge badge--${p.stock === 0 ? 'danger' : 'warn'}`}>
+                        {p.stock === 0 ? 'Out of Stock' : 'Low Stock'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Dead Stock */}
+      <section className="insight-section">
+        <h3>Dead Stock (never sold)</h3>
+        {deadStock.length === 0 ? (
+          <p className="insight-empty">No dead stock detected</p>
+        ) : (
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Stock</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deadStock.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.name}</td>
+                    <td className="table__sku">{p.sku}</td>
+                    <td>{p.stock}</td>
+                    <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
