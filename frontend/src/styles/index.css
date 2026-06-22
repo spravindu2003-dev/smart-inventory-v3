@@ -733,6 +733,101 @@ body {
   color: var(--color-text-secondary);
 }
 
+/* ——— Filters bar ——— */
+
+.filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filters-bar__input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  outline: none;
+  font-family: inherit;
+  flex: 1;
+  min-width: 180px;
+  transition: border-color 0.15s;
+}
+
+.filters-bar__input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.filters-bar__input--date {
+  flex: 0 0 auto;
+  min-width: 140px;
+}
+
+.filters-bar__select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  outline: none;
+  font-family: inherit;
+  background: var(--color-surface);
+  min-width: 150px;
+  transition: border-color 0.15s;
+}
+
+.filters-bar__select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+/* ——— Action badges ——— */
+
+.badge--action {
+  font-size: 0.75rem;
+  padding: 0.1875rem 0.5rem;
+}
+
+.badge--login_success {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.badge--login_failed {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.badge--register_user {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge--create_product {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.badge--update_product {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge--delete_product {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.badge--remove_product {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge--sale_created {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
 /* ——— Responsive ——— */
 
 .dashboard-grid {

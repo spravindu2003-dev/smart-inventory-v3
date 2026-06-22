@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getActivities } from '../api/activities';
+import { getActivities, getActivitySummary } from '../api/activities';
 
 const actionLabels = {
   LOGIN_SUCCESS: 'Login',
@@ -9,20 +9,51 @@ const actionLabels = {
   UPDATE_PRODUCT: 'Updated Product',
   DELETE_PRODUCT: 'Deleted Product',
   REMOVE_PRODUCT: 'Removed Product',
+  SALE_CREATED: 'Sale Created',
 };
+
+const actionOptions = [
+  { value: '', label: 'All Actions' },
+  ...Object.entries(actionLabels).map(([value, label]) => ({ value, label })),
+];
 
 export default function ActivityLogPage() {
   const [activities, setActivities] = useState([]);
   const [pagination, setPagination] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [search, setSearch] = useState('');
+  const [actionFilter, setActionFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const buildParams = useCallback((p) => ({
+    page: p,
+    limit: 50,
+    ...(actionFilter && { action: actionFilter }),
+    ...(search && { search }),
+    ...(startDate && { startDate }),
+    ...(endDate && { endDate }),
+  }), [actionFilter, search, startDate, endDate]);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      const data = await getActivitySummary();
+      setSummary(data);
+    } catch {
+      /* silent */
+    }
+  }, []);
 
   const fetch = useCallback(async (p) => {
     setLoading(true);
     setError('');
     try {
-      const data = await getActivities(p, 50);
+      const params = buildParams(p);
+      const data = await getActivities(params);
       setActivities(data.activities);
       setPagination(data.pagination);
     } catch (err) {
@@ -30,9 +61,32 @@ export default function ActivityLogPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [buildParams]);
 
-  useEffect(() => { fetch(page); }, [fetch, page]);
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  useEffect(() => {
+    fetch(page);
+  }, [fetch, page]);
+
+  function handleSearch() {
+    setPage(1);
+    fetch(1);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') handleSearch();
+  }
+
+  function handleReset() {
+    setSearch('');
+    setActionFilter('');
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+  }
 
   return (
     <div>
@@ -40,9 +94,66 @@ export default function ActivityLogPage() {
         <h2 className="page-title">Activity Log</h2>
       </div>
 
-      {error && <div className="alert alert--error">{error}</div>}
+      {summary && (
+        <div className="insights-grid" style={{ marginBottom: '1.25rem' }}>
+          <div className="insight-card">
+            <span className="insight-card__value">{summary.totalActivities}</span>
+            <span className="insight-card__label">Total Activities</span>
+          </div>
+          <div className="insight-card">
+            <span className="insight-card__value">{summary.todayActivities}</span>
+            <span className="insight-card__label">Today</span>
+          </div>
+          <div className="insight-card">
+            <span className="insight-card__value">{summary.loginActivitiesToday}</span>
+            <span className="insight-card__label">Logins Today</span>
+          </div>
+          <div className="insight-card">
+            <span className="insight-card__value">{summary.salesActivitiesToday}</span>
+            <span className="insight-card__label">Sales Today</span>
+          </div>
+        </div>
+      )}
 
-      <div className="table-wrapper">
+      <div className="filters-bar">
+        <input
+          className="filters-bar__input"
+          type="text"
+          placeholder="Search username, action, description..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <select
+          className="filters-bar__select"
+          value={actionFilter}
+          onChange={(e) => setActionFilter(e.target.value)}
+        >
+          {actionOptions.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <input
+          className="filters-bar__input filters-bar__input--date"
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          title="Start date"
+        />
+        <input
+          className="filters-bar__input filters-bar__input--date"
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          title="End date"
+        />
+        <button className="btn btn--sm" onClick={handleSearch}>Search</button>
+        <button className="btn btn--sm btn--danger" onClick={handleReset}>Reset</button>
+      </div>
+
+      {error && <div className="alert alert--error" style={{ marginTop: '1rem' }}>{error}</div>}
+
+      <div className="table-wrapper" style={{ marginTop: '0.75rem' }}>
         <table className="table">
           <thead>
             <tr>

@@ -1,4 +1,16 @@
 import api from './client';
 
-export const getActivities = (page = 1, limit = 50) =>
-  api.get(`/activities?page=${page}&limit=${limit}`).then((r) => r.data);
+export const getActivities = (params = {}) => {
+  const q = new URLSearchParams();
+  if (params.page) q.set('page', params.page);
+  if (params.limit) q.set('limit', params.limit);
+  if (params.action) q.set('action', params.action);
+  if (params.user) q.set('user', params.user);
+  if (params.search) q.set('search', params.search);
+  if (params.startDate) q.set('startDate', params.startDate);
+  if (params.endDate) q.set('endDate', params.endDate);
+  return api.get(`/activities?${q.toString()}`).then((r) => r.data);
+};
+
+export const getActivitySummary = () =>
+  api.get('/activities/summary').then((r) => r.data);
