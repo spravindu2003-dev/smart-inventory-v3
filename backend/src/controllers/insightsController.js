@@ -7,6 +7,11 @@ exports.summary = async (_req, res) => {
     lowStockProducts,
     deadStockProducts,
     recentActivities,
+    revenueAgg,
+    totalSales,
+    unitsSoldAgg,
+    topSellingAgg,
+    recentSales,
   ] = await Promise.all([
     prisma.product.count(),
     prisma.product.aggregate({ _sum: { stock: true } }),
@@ -14,8 +19,47 @@ exports.summary = async (_req, res) => {
     prisma.product.count({
       where: { saleItems: { none: {} } },
     }),
-    prisma.activityLog.count({ where: { createdAt: { gte: new Date(Date.now() - 86400000) } } }),
+    prisma.activityLog.count({
+      where: { createdAt: { gte: new Date(Date.now() - 86400000) } },
+    }),
+    prisma.sale.aggregate({ _sum: { total: true } }),
+    prisma.sale.count(),
+    prisma.saleItem.aggregate({ _sum: { quantity: true } }),
+    prisma.saleItem.groupBy({
+      by: ['productId'],
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: 5,
+    }),
+    prisma.sale.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { username: true } },
+        items: {
+          include: { product: { select: { id: true, name: true, sku: true } } },
+        },
+      },
+    }),
   ]);
+
+  const productIds = topSellingAgg.map((t) => t.productId);
+  const products = productIds.length > 0
+    ? await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, name: true, sku: true },
+      })
+    : [];
+
+  const topSellingProducts = topSellingAgg.map((t) => {
+    const product = products.find((p) => p.id === t.productId);
+    return {
+      id: t.productId,
+      name: product?.name || 'Unknown',
+      sku: product?.sku || '',
+      totalSold: t._sum.quantity,
+    };
+  });
 
   res.json({
     totalProducts,
@@ -23,6 +67,11 @@ exports.summary = async (_req, res) => {
     lowStockProducts,
     deadStockProducts,
     activitiesToday: recentActivities,
+    totalRevenue: revenueAgg._sum.total || 0,
+    totalSales,
+    totalUnitsSold: unitsSoldAgg._sum.quantity || 0,
+    topSellingProducts,
+    recentSales,
   });
 };
 
