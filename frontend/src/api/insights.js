@@ -1,16 +1,16 @@
 import api from './client';
 
-export const getSummary = () =>
-  api.get('/insights/summary');
+export const getSummary = (signal) =>
+  api.get('/insights/summary', { signal });
 
-export const getMostSold = () =>
-  api.get('/insights/most-sold');
+export const getMostSold = (signal) =>
+  api.get('/insights/most-sold', { signal });
 
-export const getLeastSold = () =>
-  api.get('/insights/least-sold');
+export const getLeastSold = (signal) =>
+  api.get('/insights/least-sold', { signal });
 
-export const getLowStock = () =>
-  api.get('/insights/low-stock');
+export const getLowStock = (signal) =>
+  api.get('/insights/low-stock', { signal });
 
-export const getDeadStock = () =>
-  api.get('/insights/dead-stock');
+export const getDeadStock = (signal) =>
+  api.get('/insights/dead-stock', { signal });

@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getData, safeArray } from '../api/safeResponse';
 import * as salesApi from '../api/sales';
 import * as productsApi from '../api/products';
+import { useFetch } from '../hooks/useFetch';
 
 export default function SalesPage() {
   const { user } = useAuth();
 
   const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { loading, error, run, setError } = useFetch();
   const [success, setSuccess] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -19,20 +19,12 @@ export default function SalesPage() {
   const [cart, setCart] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await salesApi.getSales();
+  useEffect(() => {
+    run(async (signal) => {
+      const res = await salesApi.getSales(signal);
       setSales(getData(res));
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load sales');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetch(); }, [fetch]);
+    });
+  }, [run]);
 
   function clearMessages() {
     setError('');

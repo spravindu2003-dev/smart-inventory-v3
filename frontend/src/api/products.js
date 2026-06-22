@@ -1,19 +1,19 @@
 import api from './client';
 
-export const getProducts = () =>
-  api.get('/products');
+export const getProducts = (signal) =>
+  api.get('/products', { signal });
 
-export const getProduct = (id) =>
-  api.get(`/products/${id}`);
+export const getProduct = (id, signal) =>
+  api.get(`/products/${id}`, { signal });
 
-export const createProduct = (data) =>
-  api.post('/products', data);
+export const createProduct = (data, signal) =>
+  api.post('/products', data, { signal });
 
-export const updateProduct = (id, data) =>
-  api.put(`/products/${id}`, data);
+export const updateProduct = (id, data, signal) =>
+  api.put(`/products/${id}`, data, { signal });
 
-export const deleteProduct = (id) =>
-  api.delete(`/products/${id}`);
+export const deleteProduct = (id, signal) =>
+  api.delete(`/products/${id}`, { signal });
 
-export const removeProduct = (id, reason) =>
-  api.patch(`/products/${id}/remove`, { removalReason: reason });
+export const removeProduct = (id, reason, signal) =>
+  api.patch(`/products/${id}/remove`, { removalReason: reason }, { signal });

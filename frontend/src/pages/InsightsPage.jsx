@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { getData, safeArray } from '../api/safeResponse';
 import * as insightsApi from '../api/insights';
+import { useFetch } from '../hooks/useFetch';
 
 export default function InsightsPage() {
   const [summary, setSummary] = useState(null);
@@ -8,33 +9,24 @@ export default function InsightsPage() {
   const [leastSold, setLeastSold] = useState([]);
   const [lowStock, setLowStock] = useState([]);
   const [deadStock, setDeadStock] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { loading, error, run } = useFetch();
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
+  useEffect(() => {
+    run(async (signal) => {
       const [s, ms, ls, ls2, ds] = await Promise.all([
-        insightsApi.getSummary(),
-        insightsApi.getMostSold().catch(() => ({ data: { data: [] } })),
-        insightsApi.getLeastSold().catch(() => ({ data: { data: [] } })),
-        insightsApi.getLowStock(),
-        insightsApi.getDeadStock().catch(() => ({ data: { data: [] } })),
+        insightsApi.getSummary(signal),
+        insightsApi.getMostSold(signal).catch(() => ({ data: { data: [] } })),
+        insightsApi.getLeastSold(signal).catch(() => ({ data: { data: [] } })),
+        insightsApi.getLowStock(signal),
+        insightsApi.getDeadStock(signal).catch(() => ({ data: { data: [] } })),
       ]);
       setSummary(s.data);
       setMostSold(getData(ms));
       setLeastSold(getData(ls));
       setLowStock(getData(ls2));
       setDeadStock(getData(ds));
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load insights');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetch(); }, [fetch]);
+    });
+  }, [run]);
 
   if (loading) return <div className="page-center"><div className="spinner" /></div>;
 

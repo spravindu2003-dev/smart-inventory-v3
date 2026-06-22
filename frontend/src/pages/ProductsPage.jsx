@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getData, safeArray } from '../api/safeResponse';
 import * as productsApi from '../api/products';
+import { useFetch } from '../hooks/useFetch';
 
 const emptyForm = { name: '', sku: '', price: '', stock: '', category: '', description: '', expiryDate: '' };
 
@@ -10,8 +11,7 @@ export default function ProductsPage() {
   const canWrite = user?.role === 'owner' || user?.role === 'manager';
 
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { loading, error, run, setError } = useFetch();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -22,20 +22,12 @@ export default function ProductsPage() {
   const [removalReason, setRemovalReason] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await productsApi.getProducts();
+  useEffect(() => {
+    run(async (signal) => {
+      const res = await productsApi.getProducts(signal);
       setProducts(getData(res));
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load products');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetch(); }, [fetch]);
+    });
+  }, [run]);
 
   function openCreate() {
     setEditing(null);

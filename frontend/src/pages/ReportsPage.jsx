@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { getData, safeArray } from '../api/safeResponse';
 import * as reportsApi from '../api/reports';
+import { useFetch } from '../hooks/useFetch';
 
 const STOCK_COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#9ca3af'];
 const CAT_COLORS = ['#4f46e5', '#ec4899', '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6', '#e11d48', '#a855f7'];
@@ -30,7 +31,7 @@ function toDollar(v) {
 }
 
 export default function ReportsPage() {
-  const [data, setData] = useState({
+  const [chartData, setChartData] = useState({
     revenueTrend: [],
     salesTrend: [],
     topProducts: [],
@@ -38,24 +39,22 @@ export default function ReportsPage() {
     stockDist: null,
     insights: null,
     activityDist: [],
-    error: '',
-    loading: true,
   });
+  const { loading, error, run } = useFetch();
 
-  const fetchAll = useCallback(async () => {
-    setData((p) => ({ ...p, loading: true, error: '' }));
-    try {
+  useEffect(() => {
+    run(async (signal) => {
       const [revenue, sales, products, stock, categories, insights, activity] =
         await Promise.all([
-          reportsApi.getRevenueTrend(7),
-          reportsApi.getSalesTrend(7),
-          reportsApi.getTopProducts(),
-          reportsApi.getStockDistribution(),
-          reportsApi.getCategoryDistribution(),
-          reportsApi.getQuickInsights(),
-          reportsApi.getActivityDistribution(),
+          reportsApi.getRevenueTrend(7, signal),
+          reportsApi.getSalesTrend(7, signal),
+          reportsApi.getTopProducts(signal),
+          reportsApi.getStockDistribution(signal),
+          reportsApi.getCategoryDistribution(signal),
+          reportsApi.getQuickInsights(signal),
+          reportsApi.getActivityDistribution(signal),
         ]);
-      setData({
+      setChartData({
         revenueTrend: revenue.data?.trend || [],
         salesTrend: sales.data?.trend || [],
         topProducts: getData(products),
@@ -63,21 +62,11 @@ export default function ReportsPage() {
         stockDist: stock.data,
         insights: insights.data,
         activityDist: activity.data?.distribution || [],
-        error: '',
-        loading: false,
       });
-    } catch (err) {
-      setData((p) => ({
-        ...p,
-        error: err.response?.data?.message || 'Failed to load reports',
-        loading: false,
-      }));
-    }
-  }, []);
+    });
+  }, [run]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  if (data.loading) {
+  if (loading) {
     return (
       <div>
         <h2 className="page-title">Reports</h2>
@@ -88,11 +77,11 @@ export default function ReportsPage() {
     );
   }
 
-  if (data.error) {
+  if (error) {
     return (
       <div>
         <h2 className="page-title">Reports</h2>
-        <div className="alert alert--error">{data.error}</div>
+        <div className="alert alert--error">{error}</div>
       </div>
     );
   }
@@ -100,7 +89,7 @@ export default function ReportsPage() {
   const {
     revenueTrend, salesTrend, topProducts, categoryDist,
     stockDist, insights, activityDist,
-  } = data;
+  } = chartData;
 
   const stockPie = stockDist
     ? [

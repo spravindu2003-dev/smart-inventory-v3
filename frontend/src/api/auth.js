@@ -1,7 +1,7 @@
 import api from './client';
 
-export const loginUser = (email, password) =>
-  api.post('/auth/login', { email, password });
+export const loginUser = (email, password, signal) =>
+  api.post('/auth/login', { email, password }, { signal });
 
-export const getMe = () =>
-  api.get('/auth/me');
+export const getMe = (signal) =>
+  api.get('/auth/me', { signal });

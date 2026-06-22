@@ -1,5 +1,5 @@
 import api from './client';
 
-export const getSales = () => api.get('/sales');
-export const getSale = (id) => api.get(`/sales/${id}`);
-export const createSale = (items) => api.post('/sales', { items });
+export const getSales = (signal) => api.get('/sales', { signal });
+export const getSale = (id, signal) => api.get(`/sales/${id}`, { signal });
+export const createSale = (items, signal) => api.post('/sales', { items }, { signal });

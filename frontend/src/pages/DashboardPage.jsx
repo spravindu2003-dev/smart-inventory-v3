@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { safeArray } from '../api/safeResponse';
 import { getSummary } from '../api/insights';
+import { useFetch } from '../hooks/useFetch';
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -17,21 +18,14 @@ function timeAgo(dateStr) {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { loading, run } = useFetch();
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await getSummary();
+  useEffect(() => {
+    run(async (signal) => {
+      const res = await getSummary(signal);
       setSummary(res.data);
-    } catch {
-      setSummary(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetch(); }, [fetch]);
+    });
+  }, [run]);
 
   if (loading) {
     return (

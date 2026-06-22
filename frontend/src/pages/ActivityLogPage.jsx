@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getData, getPagination, safeArray } from '../api/safeResponse';
 import { getActivities, getActivitySummary } from '../api/activities';
+import { useFetch } from '../hooks/useFetch';
 
 const actionLabels = {
   LOGIN_SUCCESS: 'Login',
@@ -23,8 +24,9 @@ export default function ActivityLogPage() {
   const [pagination, setPagination] = useState(null);
   const [summary, setSummary] = useState(null);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+
+  const { loading, error, run } = useFetch();
+  const { run: runSummary } = useFetch();
 
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('');
@@ -40,41 +42,24 @@ export default function ActivityLogPage() {
     ...(endDate && { endDate }),
   }), [actionFilter, search, startDate, endDate]);
 
-  const fetchSummary = useCallback(async () => {
-    try {
-      const res = await getActivitySummary();
+  useEffect(() => {
+    runSummary(async (signal) => {
+      const res = await getActivitySummary(signal);
       setSummary(res.data);
-    } catch {
-      /* silent */
-    }
-  }, []);
+    });
+  }, [runSummary]);
 
-  const fetch = useCallback(async (p) => {
-    setLoading(true);
-    setError('');
-    try {
-      const params = buildParams(p);
+  useEffect(() => {
+    run(async (signal) => {
+      const params = { ...buildParams(page), signal };
       const res = await getActivities(params);
       setActivities(getData(res));
       setPagination(getPagination(res));
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load activities');
-    } finally {
-      setLoading(false);
-    }
-  }, [buildParams]);
-
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
-
-  useEffect(() => {
-    fetch(page);
-  }, [fetch, page]);
+    });
+  }, [run, page, buildParams]);
 
   function handleSearch() {
     setPage(1);
-    fetch(1);
   }
 
   function handleKeyDown(e) {
