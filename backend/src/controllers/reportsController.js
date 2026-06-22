@@ -34,8 +34,7 @@ exports.revenueTrend = async (_req, res) => {
 
 exports.topProducts = async (_req, res) => {
   const products = await prisma.product.findMany({
-    select: { id: true, name: true, sku: true },
-    include: { saleItems: { select: { quantity: true } } },
+    select: { id: true, name: true, sku: true, saleItems: { select: { quantity: true } } },
   });
 
   const ranked = products
