@@ -5,6 +5,7 @@ import DashboardLayout from './components/DashboardLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
+import SalesPage from './pages/SalesPage';
 import InsightsPage from './pages/InsightsPage';
 import ActivityLogPage from './pages/ActivityLogPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -23,6 +24,7 @@ export default function App() {
         >
           <Route index element={<DashboardPage />} />
           <Route path="products" element={<ProductsPage />} />
+          <Route path="sales" element={<SalesPage />} />
           <Route path="insights" element={<InsightsPage />} />
           <Route path="activities" element={<ActivityLogPage />} />
           <Route path="*" element={<NotFoundPage />} />

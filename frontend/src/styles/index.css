@@ -615,6 +615,33 @@ body {
   color: #16a34a;
 }
 
+.alert--success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.sale-items {
+  margin-top: 1rem;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.sale-items__header {
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  background: #f8fafc;
+}
+
+.sale-items .table {
+  font-size: 0.8125rem;
+}
+
 .badge--role {
   background: #eef2ff;
   color: var(--color-primary);
