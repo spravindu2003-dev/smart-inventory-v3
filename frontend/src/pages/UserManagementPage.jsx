@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { getData, safeArray } from '../api/safeResponse';
 import { useFetch } from '../hooks/useFetch';
@@ -24,6 +24,38 @@ const editRoleOptions = [
   { value: 'cashier', label: 'Cashier' },
 ];
 
+function validateUsername(val) {
+  if (!val || !val.trim()) return 'Username is required';
+  if (val.trim().length < 3) return 'Username must be at least 3 characters';
+  return null;
+}
+
+function validateEmail(val) {
+  if (!val || !val.trim()) return 'Email is required';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return 'Invalid email format';
+  return null;
+}
+
+function validatePassword(val) {
+  if (!val) return 'Password is required';
+  if (val.length < 6) return 'Password must be at least 6 characters';
+  if (!/[a-zA-Z]/.test(val) || !/[0-9]/.test(val)) return 'Password must include letters and numbers';
+  return null;
+}
+
+function validateRole(val) {
+  if (!val || !['manager', 'cashier'].includes(val)) return 'Please select a role';
+  return null;
+}
+
+function validateField(field, value) {
+  if (field === 'username') return validateUsername(value);
+  if (field === 'email') return validateEmail(value);
+  if (field === 'password') return validatePassword(value);
+  if (field === 'role') return validateRole(value);
+  return null;
+}
+
 export default function UserManagementPage() {
   const formRef = useRef(null);
   const [users, setUsers] = useState([]);
@@ -37,6 +69,8 @@ export default function UserManagementPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [saving, setSaving] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -66,6 +100,8 @@ export default function UserManagementPage() {
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
+    setFieldErrors({});
+    setTouched({});
     setModalOpen(true);
   }
 
@@ -79,6 +115,8 @@ export default function UserManagementPage() {
       username: user.username,
       password: '',
     });
+    setFieldErrors({});
+    setTouched({});
     setModalOpen(true);
   }
 
@@ -86,10 +124,42 @@ export default function UserManagementPage() {
     setModalOpen(false);
     setEditing(null);
     setForm(emptyForm);
+    setFieldErrors({});
+    setTouched({});
+  }
+
+  const setField = useCallback((field) => {
+    return (e) => {
+      const val = e.target.value;
+      setForm((p) => ({ ...p, [field]: val }));
+      const err = validateField(field, val);
+      setFieldErrors((p) => ({ ...p, [field]: err }));
+      setTouched((p) => ({ ...p, [field]: true }));
+    };
+  }, []);
+
+  function runValidation() {
+    const fields = editing ? ['email', 'role'] : ['username', 'email', 'password', 'role'];
+    const errs = {};
+    fields.forEach((f) => {
+      const err = validateField(f, form[f]);
+      if (err) errs[f] = err;
+    });
+    setFieldErrors(errs);
+    const newTouched = {};
+    fields.forEach((f) => { newTouched[f] = true; });
+    setTouched((p) => ({ ...p, ...newTouched }));
+    return errs;
   }
 
   async function handleSave(e) {
     e.preventDefault();
+    const errs = runValidation();
+    if (Object.keys(errs).length > 0) {
+      console.log('[USER_SAVE] Blocked by validation errors:', errs);
+      return;
+    }
+
     const payload = editing ? {
       firstName: form.firstName || null,
       lastName: form.lastName || null,
@@ -103,30 +173,45 @@ export default function UserManagementPage() {
       lastName: form.lastName || null,
       role: form.role,
     };
+
     console.log('[USER_SAVE] mode:', editing ? 'edit' : 'create');
-    console.log('[USER_SAVE] form values:', { ...form });
-    console.log('[USER_SAVE] trimmed username:', form.username?.trim());
     console.log('[USER_SAVE] final payload:', payload);
+
     setSaving(true);
     try {
       const res = editing
         ? await usersApi.updateUser(editing.id, payload)
         : await usersApi.createUser(payload);
       console.log('[USER_SAVE] API response:', res);
-      console.log('[USER_SAVE] response status:', res.status);
-      console.log('[USER_SAVE] response data:', res.data);
       toast.success(editing ? 'User updated' : 'User created');
       closeModal();
       setPage(1);
     } catch (err) {
-      console.log('[USER_SAVE] error object:', err);
-      console.log('[USER_SAVE] error response:', err.response);
-      console.log('[USER_SAVE] error status:', err.response?.status);
       console.log('[USER_SAVE] error data:', JSON.stringify(err.response?.data));
       if (err.response?.data?.errors) {
-        console.log('[USER_SAVE] validation errors:', JSON.stringify(err.response.data.errors));
+        const map = {};
+        err.response.data.errors.forEach((e) => {
+          const f = e.field || e.param;
+          if (f) map[f] = e.reason || e.msg;
+        });
+        setFieldErrors((p) => ({ ...p, ...map }));
+        const allTouch = {};
+        Object.keys(map).forEach((f) => { allTouch[f] = true; });
+        setTouched((p) => ({ ...p, ...allTouch }));
+      } else if (err.response?.status === 409) {
+        const msg = (err.response?.data?.message || '').toLowerCase();
+        if (msg.includes('username')) {
+          setFieldErrors((p) => ({ ...p, username: 'This username is already taken' }));
+          setTouched((p) => ({ ...p, username: true }));
+        } else if (msg.includes('email')) {
+          setFieldErrors((p) => ({ ...p, email: 'This email is already registered' }));
+          setTouched((p) => ({ ...p, email: true }));
+        } else {
+          toast.error(err.response?.data?.message || 'Save failed');
+        }
+      } else {
+        toast.error(err.response?.data?.message || 'Save failed');
       }
-      toast.error(err.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -158,9 +243,9 @@ export default function UserManagementPage() {
     }
   }
 
-  function setField(field) {
-    return (e) => setForm((p) => ({ ...p, [field]: e.target.value }));
-  }
+  const formValid = !editing
+    ? ['username', 'email', 'password', 'role'].every((f) => !validateField(f, form[f]))
+    : ['email', 'role'].every((f) => !validateField(f, form[f]));
 
   if (loading && users.length === 0) {
     return (
@@ -283,29 +368,61 @@ export default function UserManagementPage() {
         footer={
           <>
             <Button variant="ghost" onClick={closeModal}>Cancel</Button>
-            <Button onClick={() => formRef.current?.requestSubmit()} loading={saving}>
+            <Button onClick={() => formRef.current?.requestSubmit()} loading={saving} disabled={!formValid && !saving}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
             </Button>
           </>
         }
       >
-        <form ref={formRef} onSubmit={handleSave}>
+        <form ref={formRef} onSubmit={handleSave} noValidate>
           {!editing && (
             <>
-              <Input label="Username" value={form.username} onChange={setField('username')} required />
-              <Input label="Password" type="password" value={form.password} onChange={setField('password')} required />
+              <Input
+                label="Username"
+                value={form.username}
+                onChange={setField('username')}
+                error={touched.username ? fieldErrors.username : undefined}
+                required
+              />
+              <Input
+                label="Password"
+                type="password"
+                value={form.password}
+                onChange={setField('password')}
+                error={touched.password ? fieldErrors.password : undefined}
+                required
+              />
             </>
           )}
-          <Input label="Email" type="email" value={form.email} onChange={setField('email')} required />
+          <Input
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={setField('email')}
+            error={touched.email ? fieldErrors.email : undefined}
+            required
+          />
           <div className="form-row">
             <Input label="First Name" value={form.firstName} onChange={setField('firstName')} />
             <Input label="Last Name" value={form.lastName} onChange={setField('lastName')} />
           </div>
           {!editing && (
-            <Select label="Role" value={form.role} onChange={setField('role')} options={roleOptions} />
+            <Select
+              label="Role"
+              value={form.role}
+              onChange={setField('role')}
+              options={roleOptions}
+              error={touched.role ? fieldErrors.role : undefined}
+            />
           )}
           {editing && (
-            <Select label="Role" value={form.role} onChange={setField('role')} options={editRoleOptions} />
+            <Select
+              label="Role"
+              value={form.role}
+              onChange={setField('role')}
+              options={editRoleOptions}
+              error={touched.role ? fieldErrors.role : undefined}
+            />
           )}
         </form>
       </Modal>

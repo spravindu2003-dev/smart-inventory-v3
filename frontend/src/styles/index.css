@@ -1371,3 +1371,22 @@ textarea.input-field__input {
   background: #fef3c7;
   color: #b45309;
 }
+
+/* ============================================================
+   FORM VALIDATION
+   ============================================================ */
+.input-field__input--error {
+  border-color: var(--color-error, #dc2626) !important;
+}
+
+.input-field__input--error:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+
+.input-field__error {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-error, #dc2626);
+  margin-top: 0.25rem;
+  line-height: 1.25;
+}
