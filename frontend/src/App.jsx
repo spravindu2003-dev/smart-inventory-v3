@@ -9,6 +9,7 @@ import SalesPage from './pages/SalesPage';
 import InsightsPage from './pages/InsightsPage';
 import ActivityLogPage from './pages/ActivityLogPage';
 import ReportsPage from './pages/ReportsPage';
+import UserManagementPage from './pages/UserManagementPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="insights" element={<InsightsPage />} />
           <Route path="activities" element={<ActivityLogPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="users" element={<UserManagementPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

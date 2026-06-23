@@ -12,6 +12,11 @@ const actionLabels = {
   DELETE_PRODUCT: 'Deleted Product',
   REMOVE_PRODUCT: 'Removed Product',
   SALE_CREATED: 'Sale Created',
+  USER_CREATED: 'User Created',
+  USER_UPDATED: 'User Updated',
+  USER_DEACTIVATED: 'User Deactivated',
+  USER_ACTIVATED: 'User Activated',
+  DELETE_USER: 'User Deleted',
 };
 
 const actionOptions = [

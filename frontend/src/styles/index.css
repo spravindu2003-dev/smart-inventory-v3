@@ -828,6 +828,31 @@ body {
   color: #16a34a;
 }
 
+.badge--user_created {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge--user_updated {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge--user_deactivated {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.badge--user_activated {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.badge--delete_user {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
 /* ——— Reports ——— */
 
 .rpt-grid {

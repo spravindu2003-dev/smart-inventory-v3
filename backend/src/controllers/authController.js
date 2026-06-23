@@ -18,7 +18,7 @@ exports.register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { username, email, password, role } = req.body;
+  const { username, email, password } = req.body;
 
   const existing = await prisma.user.findFirst({
     where: { OR: [{ username }, { email }] },
@@ -29,7 +29,7 @@ exports.register = async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.create({
-    data: { username, email, password: hashedPassword, role },
+    data: { username, email, password: hashedPassword, role: 'owner' },
   });
 
   await logAction({
@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
     action: 'REGISTER_USER',
     entity: 'User',
     entityId: user.id,
-    description: `Registered user ${username} as ${role}`,
+    description: `Registered user ${username} as owner`,
   });
 
   const token = generateToken(user);
@@ -66,6 +66,17 @@ exports.login = async (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials' });
   }
 
+  if (!user.isActive) {
+    await logAction({
+      userId: user.id,
+      action: 'LOGIN_FAILED',
+      entity: 'User',
+      entityId: user.id,
+      description: `Disabled account login attempt for ${user.username}`,
+    });
+    return res.status(403).json({ message: 'Account disabled' });
+  }
+
   await logAction({
     userId: user.id,
     action: 'LOGIN_SUCCESS',
@@ -85,7 +96,7 @@ exports.login = async (req, res) => {
 exports.getMe = async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, username: true, email: true, role: true, createdAt: true },
+    select: { id: true, username: true, email: true, firstName: true, lastName: true, role: true, isActive: true, createdAt: true },
   });
 
   if (!user) return res.status(404).json({ message: 'User not found' });

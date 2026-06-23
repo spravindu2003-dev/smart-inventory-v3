@@ -1,0 +1,214 @@
+const prisma = require('../utils/prisma');
+const bcrypt = require('bcryptjs');
+const { logAction } = require('../utils/activityLogger');
+const asyncHandler = require('../utils/asyncHandler');
+
+exports.getAll = async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const search = req.query.search || '';
+  const roleFilter = req.query.role || '';
+
+  const where = { deletedAt: null };
+
+  if (search) {
+    where.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (roleFilter && ['owner', 'manager', 'cashier'].includes(roleFilter)) {
+    where.role = roleFilter;
+  }
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  res.json({
+    data: users,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
+};
+
+exports.create = async (req, res) => {
+  const { username, email, password, firstName, lastName, role } = req.body;
+
+  if (!['manager', 'cashier'].includes(role)) {
+    return res.status(400).json({ message: 'Role must be manager or cashier' });
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ username }, { email }] },
+  });
+
+  if (existing) return res.status(409).json({ message: 'Username or email already exists' });
+
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  const user = await prisma.user.create({
+    data: {
+      username,
+      email,
+      password: hashedPassword,
+      firstName: firstName || null,
+      lastName: lastName || null,
+      role,
+    },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      isActive: true,
+      createdAt: true,
+    },
+  });
+
+  await logAction({
+    userId: req.user.id,
+    action: 'USER_CREATED',
+    entity: 'User',
+    entityId: user.id,
+    description: `Created user ${username} as ${role}`,
+  });
+
+  res.status(201).json({ user });
+};
+
+exports.update = async (req, res) => {
+  const id = Number(req.params.id);
+  const { firstName, lastName, email, role } = req.body;
+
+  const existing = await prisma.user.findUnique({ where: { id } });
+  if (!existing || existing.deletedAt) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  if (email && email !== existing.email) {
+    const dup = await prisma.user.findUnique({ where: { email } });
+    if (dup) return res.status(409).json({ message: 'Email already in use' });
+  }
+
+  if (role && !['owner', 'manager', 'cashier'].includes(role)) {
+    return res.status(400).json({ message: 'Invalid role' });
+  }
+
+  const user = await prisma.user.update({
+    where: { id },
+    data: {
+      firstName: firstName !== undefined ? firstName : existing.firstName,
+      lastName: lastName !== undefined ? lastName : existing.lastName,
+      email: email ?? existing.email,
+      role: role ?? existing.role,
+    },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      isActive: true,
+      createdAt: true,
+    },
+  });
+
+  await logAction({
+    userId: req.user.id,
+    action: 'USER_UPDATED',
+    entity: 'User',
+    entityId: id,
+    description: `Updated user ${user.username}`,
+  });
+
+  res.json({ user });
+};
+
+exports.toggleStatus = async (req, res) => {
+  const id = Number(req.params.id);
+
+  const existing = await prisma.user.findUnique({ where: { id } });
+  if (!existing || existing.deletedAt) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  if (existing.id === req.user.id) {
+    return res.status(400).json({ message: 'Cannot deactivate your own account' });
+  }
+
+  const user = await prisma.user.update({
+    where: { id },
+    data: { isActive: !existing.isActive },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      role: true,
+      isActive: true,
+    },
+  });
+
+  const action = user.isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED';
+  await logAction({
+    userId: req.user.id,
+    action,
+    entity: 'User',
+    entityId: id,
+    description: `${user.isActive ? 'Activated' : 'Deactivated'} user ${user.username}`,
+  });
+
+  res.json({ user });
+};
+
+exports.remove = async (req, res) => {
+  const id = Number(req.params.id);
+
+  const existing = await prisma.user.findUnique({ where: { id } });
+  if (!existing || existing.deletedAt) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  if (existing.id === req.user.id) {
+    return res.status(400).json({ message: 'Cannot delete your own account' });
+  }
+
+  await prisma.user.update({
+    where: { id },
+    data: { deletedAt: new Date(), isActive: false },
+  });
+
+  await logAction({
+    userId: req.user.id,
+    action: 'DELETE_USER',
+    entity: 'User',
+    entityId: id,
+    description: `Deleted user ${existing.username}`,
+  });
+
+  res.json({ message: 'User deleted' });
+};
+
+Object.keys(module.exports).forEach((key) => {
+  module.exports[key] = asyncHandler(module.exports[key]);
+});
