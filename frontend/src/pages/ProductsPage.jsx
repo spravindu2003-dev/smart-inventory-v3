@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { getData, safeArray } from '../api/safeResponse';
 import * as productsApi from '../api/products';
 import { useFetch } from '../hooks/useFetch';
+import { Events, emit } from '../utils/eventBus';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
@@ -24,6 +25,7 @@ const removalOptions = [
 export default function ProductsPage() {
   const { user } = useAuth();
   const canWrite = user?.role === 'owner' || user?.role === 'manager';
+  const formRef = useRef(null);
 
   const [products, setProducts] = useState([]);
   const { loading, run } = useFetch();
@@ -37,12 +39,16 @@ export default function ProductsPage() {
   const [removalReason, setRemovalReason] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    run(async (signal) => {
-      const res = await productsApi.getProducts(signal);
+  const fetchProducts = useRef((signal) => {
+    run(async (s) => {
+      const res = await productsApi.getProducts(s);
       setProducts(getData(res));
-    });
-  }, [run]);
+    }, signal);
+  });
+
+  useEffect(() => {
+    fetchProducts.current();
+  }, []);
 
   function openCreate() {
     setEditing(null);
@@ -62,6 +68,10 @@ export default function ProductsPage() {
       expiryDate: product.expiryDate ? product.expiryDate.slice(0, 10) : '',
     });
     setModalOpen(true);
+  }
+
+  function handleFormSubmit() {
+    formRef.current?.requestSubmit();
   }
 
   async function handleSave(e) {
@@ -84,6 +94,7 @@ export default function ProductsPage() {
       setModalOpen(false);
       setEditing(null);
       setForm(emptyForm);
+      emit(Events.PRODUCT_UPDATED, { id: editing?.id });
       const res = await productsApi.getProducts();
       setProducts(getData(res));
     } catch (err) {
@@ -109,6 +120,7 @@ export default function ProductsPage() {
       }
       toast.success('Product removed');
       setDeleteTarget(null);
+      emit(Events.PRODUCT_UPDATED, { id: deleteTarget.id });
       const res = await productsApi.getProducts();
       setProducts(getData(res));
     } catch (err) {
@@ -220,13 +232,13 @@ export default function ProductsPage() {
         footer={
           <>
             <Button variant="ghost" onClick={() => { setModalOpen(false); setEditing(null); setForm(emptyForm); }}>Cancel</Button>
-            <Button type="submit" form="product-form" loading={saving}>
+            <Button loading={saving} onClick={handleFormSubmit}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
             </Button>
           </>
         }
       >
-        <form id="product-form" onSubmit={handleSave}>
+        <form ref={formRef} id="product-form" onSubmit={handleSave}>
           <Input label="SKU" value={form.sku} onChange={set('sku')} required />
           <Input label="Name" value={form.name} onChange={set('name')} required />
           <div className="form-row">

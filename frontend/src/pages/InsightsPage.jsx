@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getData, safeArray } from '../api/safeResponse';
 import * as insightsApi from '../api/insights';
 import { useFetch } from '../hooks/useFetch';
+import { Events, on } from '../utils/eventBus';
 
 export default function InsightsPage() {
   const [summary, setSummary] = useState(null);
@@ -11,7 +12,7 @@ export default function InsightsPage() {
   const [deadStock, setDeadStock] = useState([]);
   const { loading, error, run } = useFetch();
 
-  useEffect(() => {
+  function fetchAll() {
     run(async (signal) => {
       const [s, ms, ls, ls2, ds] = await Promise.all([
         insightsApi.getSummary(signal),
@@ -26,7 +27,17 @@ export default function InsightsPage() {
       setLowStock(getData(ls2));
       setDeadStock(getData(ds));
     });
-  }, [run]);
+  }
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  useEffect(() => {
+    const unsub1 = on(Events.SALE_UPDATED, fetchAll);
+    const unsub2 = on(Events.PRODUCT_UPDATED, fetchAll);
+    return () => { unsub1(); unsub2(); };
+  }, []);
 
   if (loading) return <div className="page-center"><div className="spinner" /></div>;
 
@@ -36,7 +47,6 @@ export default function InsightsPage() {
 
       {error && <div className="alert alert--error">{error}</div>}
 
-      {/* Summary cards */}
       <div className="insights-grid">
         <div className="insight-card">
           <span className="insight-card__value">{summary?.totalProducts ?? 0}</span>
@@ -56,7 +66,6 @@ export default function InsightsPage() {
         </div>
       </div>
 
-      {/* Most Sold */}
       <section className="insight-section">
         <h3>Most Sold Products</h3>
         {safeArray(mostSold).length === 0 ? (
@@ -87,7 +96,6 @@ export default function InsightsPage() {
         )}
       </section>
 
-      {/* Least Sold */}
       <section className="insight-section">
         <h3>Least Sold Products</h3>
         {safeArray(leastSold).length === 0 ? (
@@ -118,9 +126,8 @@ export default function InsightsPage() {
         )}
       </section>
 
-      {/* Low Stock */}
       <section className="insight-section">
-        <h3>Low Stock Alerts ( &le; 10 )</h3>
+        <h3>Low Stock Alerts (&le;10)</h3>
         {safeArray(lowStock).length === 0 ? (
           <p className="insight-empty">All products are well stocked</p>
         ) : (
@@ -153,7 +160,6 @@ export default function InsightsPage() {
         )}
       </section>
 
-      {/* Dead Stock */}
       <section className="insight-section">
         <h3>Dead Stock (never sold)</h3>
         {safeArray(deadStock).length === 0 ? (

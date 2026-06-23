@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getData, getPagination, safeArray } from '../api/safeResponse';
 import { getActivities, getActivitySummary } from '../api/activities';
 import { useFetch } from '../hooks/useFetch';
+import { Events, on } from '../utils/eventBus';
 import StatCard from '../components/ui/StatCard';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
@@ -15,6 +16,8 @@ const actionLabels = {
   DELETE_PRODUCT: 'Deleted Product',
   REMOVE_PRODUCT: 'Removed Product',
   SALE_CREATED: 'Sale Created',
+  SALE_UPDATED: 'Sale Updated',
+  SALE_UNDONE: 'Sale Undone',
   USER_CREATED: 'User Created',
   USER_UPDATED: 'User Updated',
   USER_DEACTIVATED: 'User Deactivated',
@@ -40,6 +43,7 @@ export default function ActivityLogPage() {
 
   const { loading, error, run } = useFetch();
   const { run: runSummary } = useFetch();
+  const pollRef = useRef(null);
 
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('');
@@ -55,21 +59,44 @@ export default function ActivityLogPage() {
     ...(endDate && { endDate }),
   }), [actionFilter, search, startDate, endDate]);
 
-  useEffect(() => {
-    runSummary(async (signal) => {
-      const res = await getActivitySummary(signal);
-      setSummary(res.data);
-    });
-  }, [runSummary]);
-
-  useEffect(() => {
+  function fetchData(p) {
     run(async (signal) => {
-      const params = { ...buildParams(page), signal };
+      const params = { ...buildParams(p), signal };
       const res = await getActivities(params);
       setActivities(getData(res));
       setPagination(getPagination(res));
     });
-  }, [run, page, buildParams]);
+  }
+
+  function fetchSummary() {
+    runSummary(async (signal) => {
+      const res = await getActivitySummary(signal);
+      setSummary(res.data);
+    });
+  }
+
+  useEffect(() => {
+    fetchSummary();
+  }, []);
+
+  useEffect(() => {
+    fetchData(page);
+  }, [page, buildParams]);
+
+  // Real-time polling every 10 seconds
+  useEffect(() => {
+    pollRef.current = setInterval(() => {
+      fetchData(page);
+      fetchSummary();
+    }, 10000);
+    return () => clearInterval(pollRef.current);
+  }, [page]);
+
+  // Listen for activity events
+  useEffect(() => {
+    const unsub = on(Events.ACTIVITY_UPDATED, () => { fetchData(page); fetchSummary(); });
+    return unsub;
+  }, [page]);
 
   function handleSearch() {
     setPage(1);

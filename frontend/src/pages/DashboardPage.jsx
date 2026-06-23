@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { safeArray } from '../api/safeResponse';
 import { getSummary } from '../api/insights';
 import { useFetch } from '../hooks/useFetch';
+import { Events, on } from '../utils/eventBus';
 import StatCard from '../components/ui/StatCard';
 import Card from '../components/ui/Card';
 import EmptyState from '../components/ui/EmptyState';
@@ -24,14 +25,25 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState(null);
   const { loading, run } = useFetch();
 
-  useEffect(() => {
+  function fetchSummary() {
     run(async (signal) => {
       const res = await getSummary(signal);
       setSummary(res.data);
     });
-  }, [run]);
+  }
 
-  if (loading) {
+  useEffect(() => {
+    fetchSummary();
+  }, []);
+
+  useEffect(() => {
+    const unsub1 = on(Events.SALE_UPDATED, fetchSummary);
+    const unsub2 = on(Events.PRODUCT_UPDATED, fetchSummary);
+    const unsub3 = on(Events.DASHBOARD_REFRESH, fetchSummary);
+    return () => { unsub1(); unsub2(); unsub3(); };
+  }, []);
+
+  if (loading && !summary) {
     return (
       <div>
         <h2 className="page-title">Dashboard</h2>

@@ -6,6 +6,7 @@ import {
 import { getData, safeArray } from '../api/safeResponse';
 import * as reportsApi from '../api/reports';
 import { useFetch } from '../hooks/useFetch';
+import { Events, on } from '../utils/eventBus';
 import Card from '../components/ui/Card';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
@@ -22,6 +23,8 @@ const actionLabels = {
   DELETE_PRODUCT: 'Deleted Product',
   REMOVE_PRODUCT: 'Removed Product',
   SALE_CREATED: 'Sale Created',
+  SALE_UPDATED: 'Sale Updated',
+  SALE_UNDONE: 'Sale Undone',
 };
 
 function formatDate(d) {
@@ -51,7 +54,7 @@ export default function ReportsPage() {
   });
   const { loading, error, run } = useFetch();
 
-  useEffect(() => {
+  function fetchAll() {
     run(async (signal) => {
       const [revenue, sales, products, stock, categories, insights, activity] =
         await Promise.all([
@@ -73,9 +76,19 @@ export default function ReportsPage() {
         activityDist: activity.data?.distribution || [],
       });
     });
-  }, [run]);
+  }
 
-  if (loading) {
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  useEffect(() => {
+    const unsub1 = on(Events.SALE_UPDATED, fetchAll);
+    const unsub2 = on(Events.PRODUCT_UPDATED, fetchAll);
+    return () => { unsub1(); unsub2(); };
+  }, []);
+
+  if (loading && !chartData.revenueTrend.length) {
     return (
       <div>
         <h2 className="page-title">Reports</h2>

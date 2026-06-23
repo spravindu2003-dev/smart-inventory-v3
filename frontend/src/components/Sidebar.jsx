@@ -8,7 +8,6 @@ const links = [
   { to: '/insights', label: 'Insights', icon: '\u2606', roles: ['owner', 'manager'] },
   { to: '/activities', label: 'Activity Log', icon: '\u2691', roles: ['owner', 'manager'] },
   { to: '/reports', label: 'Reports', icon: '\u2261', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/settings', label: 'Settings', icon: '\u2699', roles: ['owner', 'manager', 'cashier'] },
   { to: '/users', label: 'Users', icon: '\u263A', roles: ['owner'] },
 ];
 

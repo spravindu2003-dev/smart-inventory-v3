@@ -21,4 +21,8 @@ router.get('/', ctrl.getAll);
 
 router.get('/:id', ctrl.getById);
 
+router.put('/:id', ctrl.update);
+
+router.post('/:id/undo', ctrl.undo);
+
 module.exports = router;
