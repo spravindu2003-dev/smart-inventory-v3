@@ -1,5 +1,11 @@
 import api from './client';
 
+export const getMyProfile = (signal) =>
+  api.get('/users/me', { signal });
+
+export const updateMyProfile = (data, signal) =>
+  api.put('/users/me', data, { signal });
+
 export const getUsers = (params, signal) => {
   const q = new URLSearchParams();
   if (params.page) q.set('page', params.page);

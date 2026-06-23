@@ -17,6 +17,11 @@ const actionLabels = {
   USER_DEACTIVATED: 'User Deactivated',
   USER_ACTIVATED: 'User Activated',
   DELETE_USER: 'User Deleted',
+  PROFILE_UPDATED: 'Profile Updated',
+  PASSWORD_CHANGED: 'Password Changed',
+  PASSWORD_RESET_REQUESTED: 'Reset Requested',
+  PASSWORD_RESET_COMPLETED: 'Reset Completed',
+  EMAIL_CHANGED: 'Email Changed',
 };
 
 const actionOptions = [

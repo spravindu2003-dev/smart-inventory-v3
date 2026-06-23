@@ -5,6 +5,17 @@ const { authenticate, authorize } = require('../middleware/auth');
 
 const router = Router();
 
+router.get('/me', authenticate, userController.updateMe);
+
+router.put(
+  '/me',
+  authenticate,
+  [
+    body('email').optional().isEmail().normalizeEmail(),
+  ],
+  userController.updateMe
+);
+
 router.use(authenticate, authorize('owner'));
 
 router.get('/', userController.getAll);

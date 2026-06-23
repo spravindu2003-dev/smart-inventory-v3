@@ -27,8 +27,10 @@ model User {
   firstName  String?
   lastName   String?
   role       Role          @default(cashier)
-  isActive   Boolean       @default(true)
-  deletedAt  DateTime?
+  isActive         Boolean       @default(true)
+  deletedAt        DateTime?
+  resetToken       String?
+  resetTokenExpiry DateTime?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   sales      Sale[]

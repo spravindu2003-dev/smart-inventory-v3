@@ -209,6 +209,64 @@ exports.remove = async (req, res) => {
   res.json({ message: 'User deleted' });
 };
 
+exports.updateMe = async (req, res) => {
+  const { firstName, lastName, email } = req.body;
+
+  const existing = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!existing) return res.status(404).json({ message: 'User not found' });
+
+  const updates = {};
+  let emailChanged = false;
+
+  if (firstName !== undefined) updates.firstName = firstName || null;
+  if (lastName !== undefined) updates.lastName = lastName || null;
+
+  if (email !== undefined && email !== existing.email) {
+    const dup = await prisma.user.findUnique({ where: { email } });
+    if (dup) return res.status(409).json({ message: 'Email already in use' });
+    updates.email = email;
+    emailChanged = true;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.json({ user: existing });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.user.id },
+    data: updates,
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      isActive: true,
+    },
+  });
+
+  if (emailChanged) {
+    await logAction({
+      userId: req.user.id,
+      action: 'EMAIL_CHANGED',
+      entity: 'User',
+      entityId: req.user.id,
+      description: `User ${user.username} changed email to ${user.email}`,
+    });
+  }
+
+  await logAction({
+    userId: req.user.id,
+    action: 'PROFILE_UPDATED',
+    entity: 'User',
+    entityId: req.user.id,
+    description: `User ${user.username} updated profile`,
+  });
+
+  res.json({ user });
+};
+
 Object.keys(module.exports).forEach((key) => {
   module.exports[key] = asyncHandler(module.exports[key]);
 });

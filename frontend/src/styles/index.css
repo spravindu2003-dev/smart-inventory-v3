@@ -853,6 +853,31 @@ body {
   color: #dc2626;
 }
 
+.badge--profile_updated {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge--password_changed {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.badge--password_reset_requested {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge--password_reset_completed {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.badge--email_changed {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
 /* ——— Reports ——— */
 
 .rpt-grid {

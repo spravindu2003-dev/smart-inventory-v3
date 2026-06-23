@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
@@ -64,6 +64,11 @@ export default function LoginPage() {
           <button type="submit" className="btn btn--primary" disabled={submitting}>
             {submitting ? 'Signing in...' : 'Sign in'}
           </button>
+          <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+            <Link to="/forgot-password" style={{ color: 'var(--color-primary)', fontSize: '0.875rem' }}>
+              Forgot Password?
+            </Link>
+          </div>
         </form>
       </div>
     </div>
