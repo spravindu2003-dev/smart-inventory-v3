@@ -3,6 +3,7 @@ import { getData, safeArray } from '../api/safeResponse';
 import * as insightsApi from '../api/insights';
 import { useFetch } from '../hooks/useFetch';
 import { Events, on } from '../utils/eventBus';
+import Skeleton from '../components/ui/Skeleton';
 
 export default function InsightsPage() {
   const [summary, setSummary] = useState(null);
@@ -39,7 +40,25 @@ export default function InsightsPage() {
     return () => { unsub1(); unsub2(); };
   }, []);
 
-  if (loading) return <div className="page-center"><div className="spinner" /></div>;
+  if (loading) {
+    return (
+      <div>
+        <h2 className="page-title">Insights</h2>
+        <div className="insights-grid">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="insight-card">
+              <Skeleton width="60px" height={28} />
+              <div style={{ marginTop: 4 }}><Skeleton width="80px" height={14} /></div>
+            </div>
+          ))}
+        </div>
+        <section className="insight-section">
+          <Skeleton width="180px" height={20} />
+          <div style={{ marginTop: 12 }}><Skeleton width="100%" height={16} count={3} /></div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div>

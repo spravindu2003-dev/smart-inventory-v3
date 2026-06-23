@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { getData, safeArray } from '../api/safeResponse';
+import { getData, getPagination, safeArray } from '../api/safeResponse';
 import { useFetch } from '../hooks/useFetch';
 import * as usersApi from '../api/users';
 import Button from '../components/ui/Button';
@@ -83,7 +83,7 @@ export default function UserManagementPage() {
       if (roleFilter) params.role = roleFilter;
       const res = await usersApi.getUsers(params, signal);
       setUsers(getData(res));
-      setPagination(res.data.pagination);
+      setPagination(getPagination(res));
     });
   }, [run, page, search, roleFilter]);
 
@@ -155,10 +155,7 @@ export default function UserManagementPage() {
   async function handleSave(e) {
     e.preventDefault();
     const errs = runValidation();
-    if (Object.keys(errs).length > 0) {
-      console.log('[USER_SAVE] Blocked by validation errors:', errs);
-      return;
-    }
+    if (Object.keys(errs).length > 0) return;
 
     const payload = editing ? {
       firstName: form.firstName || null,
@@ -174,20 +171,15 @@ export default function UserManagementPage() {
       role: form.role,
     };
 
-    console.log('[USER_SAVE] mode:', editing ? 'edit' : 'create');
-    console.log('[USER_SAVE] final payload:', payload);
-
     setSaving(true);
     try {
       const res = editing
         ? await usersApi.updateUser(editing.id, payload)
         : await usersApi.createUser(payload);
-      console.log('[USER_SAVE] API response:', res);
       toast.success(editing ? 'User updated' : 'User created');
       closeModal();
       setPage(1);
     } catch (err) {
-      console.log('[USER_SAVE] error data:', JSON.stringify(err.response?.data));
       if (err.response?.data?.errors) {
         const map = {};
         err.response.data.errors.forEach((e) => {
