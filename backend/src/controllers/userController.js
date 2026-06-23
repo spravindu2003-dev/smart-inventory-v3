@@ -3,6 +3,15 @@ const bcrypt = require('bcryptjs');
 const { logAction } = require('../utils/activityLogger');
 const asyncHandler = require('../utils/asyncHandler');
 
+exports.getMe = async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { id: true, username: true, email: true, firstName: true, lastName: true, role: true, isActive: true, createdAt: true },
+  });
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  res.json({ user });
+};
+
 exports.getAll = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
@@ -52,15 +61,31 @@ exports.getAll = async (req, res) => {
 exports.create = async (req, res) => {
   const { username, email, password, firstName, lastName, role } = req.body;
 
+  console.log('[USER_CREATE] Request body:', JSON.stringify(req.body));
+
+  if (!username || !email || !password || !role) {
+    console.log('[USER_CREATE] Missing required fields');
+    return res.status(400).json({ message: 'All fields are required: username, email, password, role' });
+  }
+
   if (!['manager', 'cashier'].includes(role)) {
+    console.log('[USER_CREATE] Invalid role:', role);
     return res.status(400).json({ message: 'Role must be manager or cashier' });
+  }
+
+  if (password.length < 6) {
+    console.log('[USER_CREATE] Password too short');
+    return res.status(400).json({ message: 'Password must be at least 6 characters' });
   }
 
   const existing = await prisma.user.findFirst({
     where: { OR: [{ username }, { email }] },
   });
 
-  if (existing) return res.status(409).json({ message: 'Username or email already exists' });
+  if (existing) {
+    console.log('[USER_CREATE] Duplicate username or email:', { username, email });
+    return res.status(409).json({ message: 'Username or email already exists' });
+  }
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -84,6 +109,8 @@ exports.create = async (req, res) => {
       createdAt: true,
     },
   });
+
+  console.log('[USER_CREATE] User created successfully:', { id: user.id, username: user.username, role: user.role });
 
   await logAction({
     userId: req.user.id,
