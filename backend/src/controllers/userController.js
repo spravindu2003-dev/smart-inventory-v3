@@ -61,20 +61,33 @@ exports.getAll = async (req, res) => {
 exports.create = async (req, res) => {
   const { username, email, password, firstName, lastName, role } = req.body;
 
+  console.log('========================================');
+  console.log('[USER_CREATE] === ENTER ===');
   console.log('[USER_CREATE] Request body:', JSON.stringify(req.body));
+  console.log('[USER_CREATE] Authenticated user:', JSON.stringify(req.user));
+  console.log('[USER_CREATE] Auth user role:', req.user?.role);
+
+  const trimmedRole = (role || '').trim().toLowerCase();
+  console.log('[USER_CREATE] Raw role value:', JSON.stringify(role));
+  console.log('[USER_CREATE] Trimmed+lowercased role:', trimmedRole);
 
   if (!username || !email || !password || !role) {
-    console.log('[USER_CREATE] Missing required fields');
+    console.log('[USER_CREATE] FAIL: Missing required fields');
+    console.log('[USER_CREATE]   username:', !!username, 'email:', !!email, 'password:', !!password, 'role:', !!role);
+    console.log('========================================');
     return res.status(400).json({ message: 'All fields are required: username, email, password, role' });
   }
 
   if (!['manager', 'cashier'].includes(role)) {
-    console.log('[USER_CREATE] Invalid role:', role);
+    console.log('[USER_CREATE] FAIL: Invalid role value:', role);
+    console.log('[USER_CREATE]   Expected one of: manager, cashier');
+    console.log('========================================');
     return res.status(400).json({ message: 'Role must be manager or cashier' });
   }
 
   if (password.length < 6) {
-    console.log('[USER_CREATE] Password too short');
+    console.log('[USER_CREATE] FAIL: Password too short (length:', password.length, ')');
+    console.log('========================================');
     return res.status(400).json({ message: 'Password must be at least 6 characters' });
   }
 
@@ -83,34 +96,48 @@ exports.create = async (req, res) => {
   });
 
   if (existing) {
-    console.log('[USER_CREATE] Duplicate username or email:', { username, email });
+    console.log('[USER_CREATE] FAIL: Duplicate username or email:', { username, email, existingId: existing.id });
+    console.log('========================================');
     return res.status(409).json({ message: 'Username or email already exists' });
   }
 
+  console.log('[USER_CREATE] Validation passed, hashing password...');
   const hashedPassword = await bcrypt.hash(password, 12);
+  console.log('[USER_CREATE] Password hashed successfully');
 
-  const user = await prisma.user.create({
-    data: {
-      username,
-      email,
-      password: hashedPassword,
-      firstName: firstName || null,
-      lastName: lastName || null,
-      role,
-    },
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      role: true,
-      isActive: true,
-      createdAt: true,
-    },
-  });
+  console.log('[USER_CREATE] Creating user with data:', JSON.stringify({
+    username, email, firstName: firstName || null, lastName: lastName || null, role,
+  }));
 
-  console.log('[USER_CREATE] User created successfully:', { id: user.id, username: user.username, role: user.role });
+  let user;
+  try {
+    user = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashedPassword,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        role,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+  } catch (prismaErr) {
+    console.log('[USER_CREATE] FAIL: Prisma error:', prismaErr.name, prismaErr.code, prismaErr.message);
+    console.log('========================================');
+    throw prismaErr;
+  }
+
+  console.log('[USER_CREATE] OK: User created:', JSON.stringify(user));
 
   await logAction({
     userId: req.user.id,

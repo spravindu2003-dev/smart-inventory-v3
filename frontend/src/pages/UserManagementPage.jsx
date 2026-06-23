@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { getData, safeArray } from '../api/safeResponse';
 import { useFetch } from '../hooks/useFetch';
@@ -25,6 +25,7 @@ const editRoleOptions = [
 ];
 
 export default function UserManagementPage() {
+  const formRef = useRef(null);
   const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [page, setPage] = useState(1);
@@ -89,30 +90,42 @@ export default function UserManagementPage() {
 
   async function handleSave(e) {
     e.preventDefault();
+    const payload = editing ? {
+      firstName: form.firstName || null,
+      lastName: form.lastName || null,
+      email: form.email,
+      role: form.role,
+    } : {
+      username: form.username,
+      email: form.email,
+      password: form.password,
+      firstName: form.firstName || null,
+      lastName: form.lastName || null,
+      role: form.role,
+    };
+    console.log('[USER_SAVE] mode:', editing ? 'edit' : 'create');
+    console.log('[USER_SAVE] form values:', { ...form });
+    console.log('[USER_SAVE] trimmed username:', form.username?.trim());
+    console.log('[USER_SAVE] final payload:', payload);
     setSaving(true);
     try {
-      if (editing) {
-        await usersApi.updateUser(editing.id, {
-          firstName: form.firstName || null,
-          lastName: form.lastName || null,
-          email: form.email,
-          role: form.role,
-        });
-        toast.success('User updated');
-      } else {
-        await usersApi.createUser({
-          username: form.username,
-          email: form.email,
-          password: form.password,
-          firstName: form.firstName || null,
-          lastName: form.lastName || null,
-          role: form.role,
-        });
-        toast.success('User created');
-      }
+      const res = editing
+        ? await usersApi.updateUser(editing.id, payload)
+        : await usersApi.createUser(payload);
+      console.log('[USER_SAVE] API response:', res);
+      console.log('[USER_SAVE] response status:', res.status);
+      console.log('[USER_SAVE] response data:', res.data);
+      toast.success(editing ? 'User updated' : 'User created');
       closeModal();
       setPage(1);
     } catch (err) {
+      console.log('[USER_SAVE] error object:', err);
+      console.log('[USER_SAVE] error response:', err.response);
+      console.log('[USER_SAVE] error status:', err.response?.status);
+      console.log('[USER_SAVE] error data:', JSON.stringify(err.response?.data));
+      if (err.response?.data?.errors) {
+        console.log('[USER_SAVE] validation errors:', JSON.stringify(err.response.data.errors));
+      }
       toast.error(err.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
@@ -270,13 +283,13 @@ export default function UserManagementPage() {
         footer={
           <>
             <Button variant="ghost" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" form="user-form" loading={saving}>
+            <Button onClick={() => formRef.current?.requestSubmit()} loading={saving}>
               {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
             </Button>
           </>
         }
       >
-        <form id="user-form" onSubmit={handleSave}>
+        <form ref={formRef} onSubmit={handleSave}>
           {!editing && (
             <>
               <Input label="Username" value={form.username} onChange={setField('username')} required />
