@@ -3,6 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import { safeArray } from '../api/safeResponse';
 import { getSummary } from '../api/insights';
 import { useFetch } from '../hooks/useFetch';
+import StatCard from '../components/ui/StatCard';
+import Card from '../components/ui/Card';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -31,8 +35,17 @@ export default function DashboardPage() {
     return (
       <div>
         <h2 className="page-title">Dashboard</h2>
-        <div className="page-center" style={{ minHeight: 200 }}>
-          <div className="spinner" />
+        <Card>
+          <Skeleton width="180px" height={22} />
+          <div style={{ marginTop: 8 }}><Skeleton width="280px" height={16} /></div>
+        </Card>
+        <div className="insights-grid" style={{ marginTop: '1.25rem' }}>
+          {Array.from({ length: 7 }, (_, i) => (
+            <Card key={i}>
+              <Skeleton width="80px" height={28} />
+              <div style={{ marginTop: 4 }}><Skeleton width="100px" height={14} /></div>
+            </Card>
+          ))}
         </div>
       </div>
     );
@@ -42,17 +55,13 @@ export default function DashboardPage() {
     return (
       <div>
         <h2 className="page-title">Dashboard</h2>
-        <div className="welcome-card">
+        <Card>
           <h3>Welcome, {user?.username}</h3>
-          <p>
-            Role: <span className="badge badge--role">{user?.role}</span>
-            {' | '}
-            Email: {user?.email}
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+            Role: <span className="badge badge--role">{user?.role}</span> | Email: {user?.email}
           </p>
-        </div>
-        <p style={{ color: 'var(--color-text-secondary)', marginTop: '1.5rem', textAlign: 'center' }}>
-          No data available
-        </p>
+        </Card>
+        <EmptyState message="No data available" />
       </div>
     );
   }
@@ -61,53 +70,31 @@ export default function DashboardPage() {
     <div>
       <h2 className="page-title">Dashboard</h2>
 
-      <div className="welcome-card">
+      <Card>
         <h3>Welcome, {user?.username}</h3>
-        <p>
-          Role: <span className="badge badge--role">{user?.role}</span>
-          {' | '}
-          Email: {user?.email}
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+          Role: <span className="badge badge--role">{user?.role}</span> | Email: {user?.email}
         </p>
-      </div>
+      </Card>
 
       <div className="insights-grid" style={{ marginTop: '1.25rem' }}>
-        <div className="insight-card">
-          <span className="insight-card__value">
-            ${Number(summary.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-          <span className="insight-card__label">Revenue</span>
-        </div>
-        <div className="insight-card">
-          <span className="insight-card__value">{summary.totalSales}</span>
-          <span className="insight-card__label">Sales</span>
-        </div>
-        <div className="insight-card">
-          <span className="insight-card__value">{summary.totalUnitsSold}</span>
-          <span className="insight-card__label">Units Sold</span>
-        </div>
-        <div className="insight-card insight-card--warn">
-          <span className="insight-card__value">{summary.lowStockProducts}</span>
-          <span className="insight-card__label">Low Stock Items</span>
-        </div>
-        <div className="insight-card insight-card--warn">
-          <span className="insight-card__value">{summary.lowStockItems}</span>
-          <span className="insight-card__label">Low Stock (1-10)</span>
-        </div>
-        <div className="insight-card insight-card--danger">
-          <span className="insight-card__value">{summary.outOfStockItems}</span>
-          <span className="insight-card__label">Out of Stock</span>
-        </div>
-        <div className="insight-card insight-card--danger">
-          <span className="insight-card__value">{summary.expiredProducts}</span>
-          <span className="insight-card__label">Expired Products</span>
-        </div>
+        <StatCard
+          value={`$${Number(summary.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          label="Revenue"
+        />
+        <StatCard value={summary.totalSales} label="Sales" />
+        <StatCard value={summary.totalUnitsSold} label="Units Sold" />
+        <StatCard value={summary.lowStockProducts} label="Low Stock Items" variant="warn" />
+        <StatCard value={summary.lowStockItems} label="Low Stock (1-10)" variant="warn" />
+        <StatCard value={summary.outOfStockItems} label="Out of Stock" variant="danger" />
+        <StatCard value={summary.expiredProducts} label="Expired Products" variant="danger" />
       </div>
 
       <div className="dashboard-grid">
         <div>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Recent Sales</h3>
           {safeArray(summary?.recentSales).length > 0 ? (
-            <div className="table-wrapper">
+            <div className="table-card">
               <table className="table">
                 <thead>
                   <tr>
@@ -132,14 +119,14 @@ export default function DashboardPage() {
               </table>
             </div>
           ) : (
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>No sales yet</p>
+            <EmptyState message="No sales yet" />
           )}
         </div>
 
         <div>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Top Products</h3>
           {safeArray(summary?.topSellingProducts).length > 0 ? (
-            <div className="table-wrapper">
+            <div className="table-card">
               <table className="table">
                 <thead>
                   <tr>
@@ -160,7 +147,7 @@ export default function DashboardPage() {
               </table>
             </div>
           ) : (
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>No products sold yet</p>
+            <EmptyState message="No products sold yet" />
           )}
         </div>
       </div>

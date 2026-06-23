@@ -1,9 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getData, safeArray } from '../api/safeResponse';
 import { useFetch } from '../hooks/useFetch';
 import * as usersApi from '../api/users';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Badge from '../components/ui/Badge';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
 
 const emptyForm = { username: '', email: '', password: '', firstName: '', lastName: '', role: 'cashier' };
+
+const roleOptions = [
+  { value: 'manager', label: 'Manager' },
+  { value: 'cashier', label: 'Cashier' },
+];
+
+const editRoleOptions = [
+  { value: 'owner', label: 'Owner' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'cashier', label: 'Cashier' },
+];
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
@@ -18,7 +37,6 @@ export default function UserManagementPage() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -47,7 +65,6 @@ export default function UserManagementPage() {
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
-    setSaveError('');
     setModalOpen(true);
   }
 
@@ -61,7 +78,6 @@ export default function UserManagementPage() {
       username: user.username,
       password: '',
     });
-    setSaveError('');
     setModalOpen(true);
   }
 
@@ -69,13 +85,11 @@ export default function UserManagementPage() {
     setModalOpen(false);
     setEditing(null);
     setForm(emptyForm);
-    setSaveError('');
   }
 
   async function handleSave(e) {
     e.preventDefault();
     setSaving(true);
-    setSaveError('');
     try {
       if (editing) {
         await usersApi.updateUser(editing.id, {
@@ -84,6 +98,7 @@ export default function UserManagementPage() {
           email: form.email,
           role: form.role,
         });
+        toast.success('User updated');
       } else {
         await usersApi.createUser({
           username: form.username,
@@ -93,22 +108,25 @@ export default function UserManagementPage() {
           lastName: form.lastName || null,
           role: form.role,
         });
+        toast.success('User created');
       }
       closeModal();
       setPage(1);
     } catch (err) {
-      setSaveError(err.response?.data?.message || 'Save failed');
+      toast.error(err.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
     }
   }
 
   async function handleToggleStatus(user) {
+    const action = user.isActive ? 'deactivate' : 'activate';
     try {
       await usersApi.toggleUserStatus(user.id);
+      toast.success(`User ${action}d`);
       setPage(1);
     } catch (err) {
-      /* silent */
+      toast.error(err.response?.data?.message || `Failed to ${action} user`);
     }
   }
 
@@ -117,10 +135,11 @@ export default function UserManagementPage() {
     setDeleting(true);
     try {
       await usersApi.deleteUser(deleteTarget.id);
+      toast.success('User deleted');
       setDeleteTarget(null);
       setPage(1);
     } catch (err) {
-      /* silent */
+      toast.error(err.response?.data?.message || 'Delete failed');
     } finally {
       setDeleting(false);
     }
@@ -131,16 +150,32 @@ export default function UserManagementPage() {
   }
 
   if (loading && users.length === 0) {
-    return <div className="page-center"><div className="spinner" /></div>;
+    return (
+      <div>
+        <div className="page-header">
+          <h2 className="page-title">User Management</h2>
+        </div>
+        <div className="table-card">
+          <div style={{ padding: '1rem' }}>
+            <Skeleton width="100%" height={20} count={6} />
+          </div>
+        </div>
+      </div>
+    );
   }
+
+  const filterRoleOptions = [
+    { value: '', label: 'All Roles' },
+    { value: 'owner', label: 'Owner' },
+    { value: 'manager', label: 'Manager' },
+    { value: 'cashier', label: 'Cashier' },
+  ];
 
   return (
     <div>
       <div className="page-header">
         <h2 className="page-title">User Management</h2>
-        <button className="btn btn--primary" onClick={openCreate}>
-          + Add User
-        </button>
+        <Button onClick={openCreate}>+ Add User</Button>
       </div>
 
       <div className="filters-bar">
@@ -151,19 +186,14 @@ export default function UserManagementPage() {
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
         />
-        <select
-          className="filters-bar__select"
+        <Select
           value={roleFilter}
           onChange={(e) => handleRoleFilter(e.target.value)}
-        >
-          <option value="">All Roles</option>
-          <option value="owner">Owner</option>
-          <option value="manager">Manager</option>
-          <option value="cashier">Cashier</option>
-        </select>
+          options={filterRoleOptions}
+        />
       </div>
 
-      <div className="table-wrapper" style={{ marginTop: '0.75rem' }}>
+      <div className="table-card" style={{ marginTop: '0.75rem' }}>
         <table className="table">
           <thead>
             <tr>
@@ -178,7 +208,9 @@ export default function UserManagementPage() {
           <tbody>
             {safeArray(users).length === 0 && (
               <tr>
-                <td colSpan={6} className="table__empty">No users found</td>
+                <td colSpan={6}>
+                  <EmptyState message="No users found" />
+                </td>
               </tr>
             )}
             {safeArray(users).map((u) => (
@@ -186,29 +218,19 @@ export default function UserManagementPage() {
                 <td><strong>{u.username}</strong></td>
                 <td>{u.email}</td>
                 <td>{(u.firstName || u.lastName) ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : '\u2014'}</td>
-                <td><span className="badge badge--role">{u.role}</span></td>
+                <td><Badge variant="role">{u.role}</Badge></td>
                 <td>
-                  <span className={`badge badge--${u.isActive ? 'ok' : 'danger'}`}>
+                  <Badge variant={u.isActive ? 'ok' : 'danger'}>
                     {u.isActive ? 'Active' : 'Disabled'}
-                  </span>
+                  </Badge>
                 </td>
                 <td>
                   <div className="table__actions">
-                    <button className="btn btn--sm" onClick={() => openEdit(u)}>
-                      Edit
-                    </button>
-                    <button
-                      className={`btn btn--sm ${u.isActive ? 'btn--danger' : ''}`}
-                      onClick={() => handleToggleStatus(u)}
-                    >
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(u)}>Edit</Button>
+                    <Button size="sm" variant={u.isActive ? 'danger' : 'ghost'} onClick={() => handleToggleStatus(u)}>
                       {u.isActive ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      className="btn btn--sm btn--danger"
-                      onClick={() => setDeleteTarget(u)}
-                    >
-                      Delete
-                    </button>
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={() => setDeleteTarget(u)}>Delete</Button>
                   </div>
                 </td>
               </tr>
@@ -219,117 +241,83 @@ export default function UserManagementPage() {
 
       {pagination && pagination.totalPages > 1 && (
         <div className="pagination">
-          <button
-            className="btn btn--sm"
+          <Button
+            size="sm"
+            variant="ghost"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
             Previous
-          </button>
+          </Button>
           <span className="pagination__info">
             Page {pagination.page} of {pagination.totalPages}
           </span>
-          <button
-            className="btn btn--sm"
+          <Button
+            size="sm"
+            variant="ghost"
             disabled={page >= pagination.totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
             Next
-          </button>
+          </Button>
         </div>
       )}
 
-      {/* Create / Edit Modal */}
-      {modalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal__header">
-              <h3>{editing ? 'Edit User' : 'Add User'}</h3>
-              <button className="modal__close" onClick={closeModal}>&times;</button>
-            </div>
-            <form onSubmit={handleSave}>
-              <div className="modal__body">
-                {saveError && <div className="alert alert--error" style={{ marginBottom: '0.75rem' }}>{saveError}</div>}
-                {!editing && (
-                  <>
-                    <label>
-                      Username *
-                      <input value={form.username} onChange={setField('username')} required />
-                    </label>
-                    <label>
-                      Password *
-                      <input type="password" value={form.password} onChange={setField('password')} required />
-                    </label>
-                  </>
-                )}
-                <label>
-                  Email *
-                  <input type="email" value={form.email} onChange={setField('email')} required />
-                </label>
-                <div className="form-row">
-                  <label>
-                    First Name
-                    <input value={form.firstName} onChange={setField('firstName')} />
-                  </label>
-                  <label>
-                    Last Name
-                    <input value={form.lastName} onChange={setField('lastName')} />
-                  </label>
-                </div>
-                {!editing && (
-                  <label>
-                    Role *
-                    <select value={form.role} onChange={setField('role')}>
-                      <option value="manager">Manager</option>
-                      <option value="cashier">Cashier</option>
-                    </select>
-                  </label>
-                )}
-                {editing && (
-                  <label>
-                    Role
-                    <select value={form.role} onChange={setField('role')}>
-                      <option value="owner">Owner</option>
-                      <option value="manager">Manager</option>
-                      <option value="cashier">Cashier</option>
-                    </select>
-                  </label>
-                )}
-              </div>
-              <div className="modal__footer">
-                <button type="button" className="btn" onClick={closeModal}>Cancel</button>
-                <button type="submit" className="btn btn--primary" disabled={saving}>
-                  {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editing ? 'Edit User' : 'Add User'}
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeModal}>Cancel</Button>
+            <Button type="submit" form="user-form" loading={saving}>
+              {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+            </Button>
+          </>
+        }
+      >
+        <form id="user-form" onSubmit={handleSave}>
+          {!editing && (
+            <>
+              <Input label="Username" value={form.username} onChange={setField('username')} required />
+              <Input label="Password" type="password" value={form.password} onChange={setField('password')} required />
+            </>
+          )}
+          <Input label="Email" type="email" value={form.email} onChange={setField('email')} required />
+          <div className="form-row">
+            <Input label="First Name" value={form.firstName} onChange={setField('firstName')} />
+            <Input label="Last Name" value={form.lastName} onChange={setField('lastName')} />
           </div>
-        </div>
-      )}
+          {!editing && (
+            <Select label="Role" value={form.role} onChange={setField('role')} options={roleOptions} />
+          )}
+          {editing && (
+            <Select label="Role" value={form.role} onChange={setField('role')} options={editRoleOptions} />
+          )}
+        </form>
+      </Modal>
 
-      {/* Delete Confirm */}
-      {deleteTarget && (
-        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
-          <div className="modal modal--sm" onClick={(e) => e.stopPropagation()}>
-            <div className="modal__header">
-              <h3>Delete User</h3>
-              <button className="modal__close" onClick={() => setDeleteTarget(null)}>&times;</button>
-            </div>
-            <div className="modal__body">
-              <p>Delete user <strong>{deleteTarget.username}</strong>?</p>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-                This will soft-delete the account. The user will no longer be able to log in.
-              </p>
-            </div>
-            <div className="modal__footer">
-              <button type="button" className="btn" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button type="button" className="btn btn--danger" disabled={deleting} onClick={handleDelete}>
-                {deleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete User"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="danger" loading={deleting} onClick={handleDelete}>
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </>
+        }
+      >
+        <div className="confirm-modal">
+          <p>Delete user <strong>{deleteTarget?.username}</strong>?</p>
+          <p className="confirm-modal__detail">
+            This will soft-delete the account. The user will no longer be able to log in.
+          </p>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

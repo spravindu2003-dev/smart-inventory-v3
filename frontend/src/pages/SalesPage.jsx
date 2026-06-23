@@ -1,16 +1,23 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { getData, safeArray } from '../api/safeResponse';
 import * as salesApi from '../api/sales';
 import * as productsApi from '../api/products';
 import { useFetch } from '../hooks/useFetch';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import Select from '../components/ui/Select';
+import Input from '../components/ui/Input';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
+import Card from '../components/ui/Card';
 
 export default function SalesPage() {
   const { user } = useAuth();
 
   const [sales, setSales] = useState([]);
   const { loading, error, run, setError } = useFetch();
-  const [success, setSuccess] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
@@ -26,14 +33,7 @@ export default function SalesPage() {
     });
   }, [run]);
 
-  function clearMessages() {
-    setError('');
-    setSuccess('');
-  }
-
   async function openModal() {
-    clearMessages();
-    setError('');
     setSelectedProductId('');
     setSelectedQty(1);
     setCart([]);
@@ -42,7 +42,7 @@ export default function SalesPage() {
       const res = await productsApi.getProducts();
       setProducts(getData(res));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load products');
+      toast.error(err.response?.data?.message || 'Failed to load products');
     }
   }
 
@@ -55,22 +55,22 @@ export default function SalesPage() {
 
   function handleAddToCart() {
     if (!selectedProductId) {
-      setError('Please select a product');
+      toast.error('Please select a product');
       return;
     }
     const product = products.find((p) => p.id === parseInt(selectedProductId, 10));
     if (!product) {
-      setError('Selected product not found');
+      toast.error('Selected product not found');
       return;
     }
     const qty = parseInt(selectedQty, 10);
     if (!qty || qty < 1) {
-      setError('Quantity must be at least 1');
+      toast.error('Quantity must be at least 1');
       return;
     }
     const existing = cart.find((c) => c.productId === product.id);
     if (existing) {
-      setError('Product already in cart');
+      toast.error('Product already in cart');
       return;
     }
     setCart((prev) => [
@@ -86,33 +86,33 @@ export default function SalesPage() {
     ]);
     setSelectedProductId('');
     setSelectedQty(1);
-    setError('');
   }
 
   function handleRemoveFromCart(index) {
     setCart((prev) => prev.filter((_, i) => i !== index));
+    toast.success('Item removed from cart');
   }
 
   async function handleCreateSale() {
     if (cart.length === 0) {
-      setError('Cart is empty. Add at least one product.');
+      toast.error('Cart is empty. Add at least one product.');
       return;
     }
     setSaving(true);
-    setError('');
     try {
       const items = cart.map((c) => ({ productId: c.productId, quantity: c.quantity }));
       const res = await salesApi.createSale(items);
-      setSuccess(`Sale #${res.data.sale.id} created successfully!`);
+      toast.success(`Sale #${res.data.sale.id} created successfully!`);
       closeModal();
-      await fetch();
+      const fetchRes = await salesApi.getSales();
+      setSales(getData(fetchRes));
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to create sale';
       const details = err.response?.data?.errors;
       if (details && Array.isArray(details)) {
-        setError(`${msg}: ${details.join('; ')}`);
+        toast.error(`${msg}: ${details.join('; ')}`);
       } else {
-        setError(msg);
+        toast.error(msg);
       }
     } finally {
       setSaving(false);
@@ -121,23 +121,36 @@ export default function SalesPage() {
 
   const cartTotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
 
-  if (loading) {
-    return <div className="page-center"><div className="spinner" /></div>;
+  if (loading && sales.length === 0) {
+    return (
+      <div>
+        <div className="page-header">
+          <h2 className="page-title">Sales</h2>
+        </div>
+        <div className="table-card">
+          <div style={{ padding: '1rem' }}>
+            <Skeleton width="100%" height={20} count={5} />
+          </div>
+        </div>
+      </div>
+    );
   }
+
+  const productOptions = safeArray(products).map((p) => ({
+    value: String(p.id),
+    label: `${p.name} ($${Number(p.price).toFixed(2)}, stock: ${p.stock})`,
+  }));
 
   return (
     <div>
       <div className="page-header">
         <h2 className="page-title">Sales</h2>
-        <button className="btn btn--primary" onClick={openModal}>
-          + Create Sale
-        </button>
+        <Button onClick={openModal}>+ Create Sale</Button>
       </div>
 
       {error && <div className="alert alert--error" style={{ marginBottom: '1rem' }}>{error}</div>}
-      {success && <div className="alert alert--success" style={{ marginBottom: '1rem' }}>{success}</div>}
 
-      <div className="table-wrapper">
+      <div className="table-card">
         <table className="table">
           <thead>
             <tr>
@@ -151,7 +164,9 @@ export default function SalesPage() {
           <tbody>
             {safeArray(sales).length === 0 && (
               <tr>
-                <td colSpan={5} className="table__empty">No sales yet</td>
+                <td colSpan={5}>
+                  <EmptyState message="No sales yet" />
+                </td>
               </tr>
             )}
             {safeArray(sales).map((sale) => (
@@ -173,7 +188,7 @@ export default function SalesPage() {
       </div>
 
       {safeArray(sales).map((sale) => sale.items?.length > 0 && (
-        <div key={`items-${sale.id}`} className="sale-items">
+        <Card key={`items-${sale.id}`} padding={false} className="sale-items">
           <div className="sale-items__header">
             Items for Sale #{sale.id}
           </div>
@@ -199,103 +214,80 @@ export default function SalesPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       ))}
 
-      {modalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
-            <div className="modal__header">
-              <h3>Create Sale</h3>
-              <button className="modal__close" onClick={closeModal}>&times;</button>
-            </div>
-            <div className="modal__body">
-              <div className="form-row">
-                <label>
-                  Product
-                  <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
-                    <option value="">-- Select --</option>
-                    {safeArray(products).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} (${Number(p.price).toFixed(2)}, stock: {p.stock})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Quantity
-                  <input
-                    type="number"
-                    min="1"
-                    value={selectedQty}
-                    onChange={(e) => setSelectedQty(e.target.value)}
-                  />
-                </label>
-              </div>
-              <button
-                type="button"
-                className="btn btn--primary"
-                onClick={handleAddToCart}
-                style={{ alignSelf: 'flex-start' }}
-              >
-                Add to Cart
-              </button>
-
-              {cart.length > 0 && (
-                <div style={{ marginTop: '0.5rem' }}>
-                  <strong style={{ fontSize: '0.8125rem' }}>Cart ({cart.length} item{cart.length > 1 ? 's' : ''})</strong>
-                  <div className="table-wrapper" style={{ marginTop: '0.5rem' }}>
-                    <table className="table">
-                      <thead>
-                        <tr>
-                          <th>Product</th>
-                          <th>Qty</th>
-                          <th>Price</th>
-                          <th>Subtotal</th>
-                          <th style={{ width: 40 }}></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cart.map((c, i) => (
-                          <tr key={i}>
-                            <td>{c.productName}</td>
-                            <td>{c.quantity}</td>
-                            <td>${c.price.toFixed(2)}</td>
-                            <td>${(c.price * c.quantity).toFixed(2)}</td>
-                            <td>
-                              <button
-                                className="btn btn--sm btn--danger"
-                                onClick={() => handleRemoveFromCart(i)}
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                              >
-                                &times;
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style={{ textAlign: 'right', marginTop: '0.5rem', fontWeight: 700 }}>
-                    Total: ${cartTotal.toFixed(2)}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="modal__footer">
-              <button type="button" className="btn" onClick={closeModal}>Cancel</button>
-              <button
-                type="button"
-                className="btn btn--primary"
-                disabled={saving || cart.length === 0}
-                onClick={handleCreateSale}
-              >
-                {saving ? 'Creating...' : 'Create Sale'}
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={modalOpen}
+        onClose={closeModal}
+        title="Create Sale"
+        size="lg"
+        footer={
+          <>
+            <Button variant="ghost" onClick={closeModal}>Cancel</Button>
+            <Button loading={saving} onClick={handleCreateSale}>
+              {saving ? 'Creating...' : 'Complete Sale'}
+            </Button>
+          </>
+        }
+      >
+        <div className="form-row">
+          <Select
+            label="Product"
+            value={selectedProductId}
+            onChange={(e) => setSelectedProductId(e.target.value)}
+            options={productOptions}
+            placeholder="-- Select --"
+          />
+          <Input
+            label="Quantity"
+            type="number"
+            min="1"
+            value={selectedQty}
+            onChange={(e) => setSelectedQty(e.target.value)}
+          />
         </div>
-      )}
+        <Button onClick={handleAddToCart} size="sm" style={{ alignSelf: 'flex-start' }}>
+          Add to Cart
+        </Button>
+
+        {cart.length > 0 && (
+          <div style={{ marginTop: '0.5rem' }}>
+            <strong style={{ fontSize: '0.8125rem' }}>Cart ({cart.length} item{cart.length > 1 ? 's' : ''})</strong>
+            <div className="table-card" style={{ marginTop: '0.5rem' }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Subtotal</th>
+                    <th style={{ width: 40 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cart.map((c, i) => (
+                    <tr key={i}>
+                      <td>{c.productName}</td>
+                      <td>{c.quantity}</td>
+                      <td>${c.price.toFixed(2)}</td>
+                      <td>${(c.price * c.quantity).toFixed(2)}</td>
+                      <td>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveFromCart(i)}>
+                          &times;
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: '0.875rem', fontWeight: 700, textAlign: 'right', marginTop: '0.5rem' }}>
+              Total: ${cartTotal.toFixed(2)}
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

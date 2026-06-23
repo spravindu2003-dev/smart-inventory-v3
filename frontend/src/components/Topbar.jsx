@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const ref = useRef(null);
 
@@ -35,8 +37,12 @@ export default function Topbar({ onMenuClick }) {
               <span className="topbar__role">{user?.role}</span>
             </div>
             <hr />
-            <button className="topbar__logout" onClick={logout}>
-              Logout
+            <button className="topbar__dropdown-item" onClick={() => { setMenuOpen(false); navigate('/settings'); }}>
+              {'\u2699'} Settings
+            </button>
+            <hr />
+            <button className="topbar__dropdown-item topbar__dropdown-item--danger" onClick={logout}>
+              {'\uD83D\uDEAA'} Logout
             </button>
           </div>
         )}

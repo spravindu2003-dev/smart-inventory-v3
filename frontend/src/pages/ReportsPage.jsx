@@ -6,6 +6,9 @@ import {
 import { getData, safeArray } from '../api/safeResponse';
 import * as reportsApi from '../api/reports';
 import { useFetch } from '../hooks/useFetch';
+import Card from '../components/ui/Card';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
 
 const STOCK_COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#9ca3af'];
 const CAT_COLORS = ['#4f46e5', '#ec4899', '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6', '#e11d48', '#a855f7'];
@@ -29,6 +32,12 @@ function formatDate(d) {
 function toDollar(v) {
   return `$${Number(v).toFixed(2)}`;
 }
+
+const chartSkeleton = (
+  <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Skeleton width="80%" height={200} />
+  </div>
+);
 
 export default function ReportsPage() {
   const [chartData, setChartData] = useState({
@@ -70,9 +79,10 @@ export default function ReportsPage() {
     return (
       <div>
         <h2 className="page-title">Reports</h2>
-        <div className="page-center" style={{ minHeight: 300 }}>
-          <div className="spinner" />
-        </div>
+        <Card>
+          <Skeleton width="200px" height={20} />
+          <div style={{ marginTop: 12 }}>{chartSkeleton}</div>
+        </Card>
       </div>
     );
   }
@@ -81,7 +91,9 @@ export default function ReportsPage() {
     return (
       <div>
         <h2 className="page-title">Reports</h2>
-        <div className="alert alert--error">{error}</div>
+        <Card>
+          <EmptyState icon={'\u26A0\uFE0F'} message={error} />
+        </Card>
       </div>
     );
   }
@@ -111,7 +123,6 @@ export default function ReportsPage() {
   }));
 
   const safeTopProducts = safeArray(topProducts);
-
   const safeRevenueTrend = safeArray(revenueTrend);
   const safeSalesTrend = safeArray(salesTrend);
 
@@ -120,37 +131,40 @@ export default function ReportsPage() {
       <h2 className="page-title">Reports</h2>
 
       <div className="rpt-grid">
-        {/* 1. Revenue Trend */}
         <div className="rpt-card">
           <h3 className="rpt-card__title">Revenue Trend (Last 7 Days)</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={safeRevenueTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip formatter={(v) => toDollar(v)} />
-              <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-          {safeRevenueTrend.length === 0 && <p className="rpt-card__empty">No revenue data</p>}
+          {safeRevenueTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={safeRevenueTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                <Tooltip formatter={(v) => toDollar(v)} />
+                <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState message="No revenue data" />
+          )}
         </div>
 
-        {/* 2. Sales Count */}
         <div className="rpt-card">
           <h3 className="rpt-card__title">Sales Count (Last 7 Days)</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={safeSalesTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-          {safeSalesTrend.length === 0 && <p className="rpt-card__empty">No sales data</p>}
+          {safeSalesTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={safeSalesTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState message="No sales data" />
+          )}
         </div>
 
-        {/* 3. Top Products */}
         <div className="rpt-card rpt-card--wide">
           <h3 className="rpt-card__title">Top Selling Products</h3>
           {safeTopProducts.length > 0 ? (
@@ -164,11 +178,10 @@ export default function ReportsPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="rpt-card__empty">No products sold yet</p>
+            <EmptyState message="No products sold yet" />
           )}
         </div>
 
-        {/* 4. Category Distribution */}
         <div className="rpt-card">
           <h3 className="rpt-card__title">Product Category Distribution</h3>
           {categoryPie.length > 0 ? (
@@ -191,11 +204,10 @@ export default function ReportsPage() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="rpt-card__empty">No categories found</p>
+            <EmptyState message="No categories found" />
           )}
         </div>
 
-        {/* 5. Stock Status + Expired */}
         <div className="rpt-card">
           <h3 className="rpt-card__title">Stock Status Distribution</h3>
           {stockPie.length > 0 ? (
@@ -217,11 +229,10 @@ export default function ReportsPage() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="rpt-card__empty">No products</p>
+            <EmptyState message="No products" />
           )}
         </div>
 
-        {/* 6. Quick Insights */}
         <div className="rpt-card rpt-card--wide">
           <h3 className="rpt-card__title">Quick Insights</h3>
           {insights ? (
@@ -260,12 +271,11 @@ export default function ReportsPage() {
               </div>
             </div>
           ) : (
-            <p className="rpt-card__empty">No insights available</p>
+            <EmptyState message="No insights available" />
           )}
         </div>
       </div>
 
-      {/* Activity Distribution - kept as supplemental section */}
       {activityPie.length > 0 && (
         <div className="rpt-card rpt-card--activity">
           <h3 className="rpt-card__title">Activity Distribution</h3>

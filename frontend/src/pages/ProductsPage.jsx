@@ -1,17 +1,32 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { getData, safeArray } from '../api/safeResponse';
 import * as productsApi from '../api/products';
 import { useFetch } from '../hooks/useFetch';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Badge from '../components/ui/Badge';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
 
 const emptyForm = { name: '', sku: '', price: '', stock: '', category: '', description: '', expiryDate: '' };
+
+const removalOptions = [
+  { value: '', label: 'No reason' },
+  { value: 'expired', label: 'Expired' },
+  { value: 'damaged', label: 'Damaged' },
+  { value: 'low_demand', label: 'Low Demand' },
+];
 
 export default function ProductsPage() {
   const { user } = useAuth();
   const canWrite = user?.role === 'owner' || user?.role === 'manager';
 
   const [products, setProducts] = useState([]);
-  const { loading, error, run, setError } = useFetch();
+  const { loading, run } = useFetch();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -61,13 +76,18 @@ export default function ProductsPage() {
       };
       if (editing) {
         await productsApi.updateProduct(editing.id, payload);
+        toast.success('Product updated');
       } else {
         await productsApi.createProduct(payload);
+        toast.success('Product created');
       }
       setModalOpen(false);
-      await fetch();
+      setEditing(null);
+      setForm(emptyForm);
+      const res = await productsApi.getProducts();
+      setProducts(getData(res));
     } catch (err) {
-      setError(err.response?.data?.message || 'Save failed');
+      toast.error(err.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -87,10 +107,12 @@ export default function ProductsPage() {
       } else {
         await productsApi.deleteProduct(deleteTarget.id);
       }
+      toast.success('Product removed');
       setDeleteTarget(null);
-      await fetch();
+      const res = await productsApi.getProducts();
+      setProducts(getData(res));
     } catch (err) {
-      setError(err.response?.data?.message || 'Delete failed');
+      toast.error(err.response?.data?.message || 'Delete failed');
     } finally {
       setDeleting(false);
     }
@@ -105,8 +127,30 @@ export default function ProductsPage() {
     return new Date(date) < new Date();
   }
 
-  if (loading) {
-    return <div className="page-center"><div className="spinner" /></div>;
+  const stockBadgeVariant = (stock) => {
+    if (stock === 0) return 'danger';
+    if (stock <= 10) return 'warn';
+    return 'ok';
+  };
+
+  const expiryBadgeVariant = (date) => {
+    if (!date) return null;
+    return isExpired(date) ? 'danger' : 'ok';
+  };
+
+  if (loading && products.length === 0) {
+    return (
+      <div>
+        <div className="page-header">
+          <h2 className="page-title">Products</h2>
+        </div>
+        <div className="table-card">
+          <div style={{ padding: '1rem' }}>
+            <Skeleton width="100%" height={20} count={6} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -114,15 +158,11 @@ export default function ProductsPage() {
       <div className="page-header">
         <h2 className="page-title">Products</h2>
         {canWrite && (
-          <button className="btn btn--primary" onClick={openCreate}>
-            + Add Product
-          </button>
+          <Button onClick={openCreate}>+ Add Product</Button>
         )}
       </div>
 
-      {error && <div className="alert alert--error">{error}</div>}
-
-      <div className="table-wrapper">
+      <div className="table-card">
         <table className="table">
           <thead>
             <tr>
@@ -138,8 +178,8 @@ export default function ProductsPage() {
           <tbody>
             {safeArray(products).length === 0 && (
               <tr>
-                <td colSpan={canWrite ? 7 : 6} className="table__empty">
-                  No products yet
+                <td colSpan={canWrite ? 7 : 6}>
+                  <EmptyState message="No products yet" />
                 </td>
               </tr>
             )}
@@ -149,30 +189,21 @@ export default function ProductsPage() {
                 <td>{p.name}</td>
                 <td>${Number(p.price).toFixed(2)}</td>
                 <td>
-                  <span className={`badge badge--${p.stock === 0 ? 'danger' : p.stock <= 10 ? 'warn' : 'ok'}`}>
-                    {p.stock}
-                  </span>
+                  <Badge variant={stockBadgeVariant(p.stock)}>{p.stock}</Badge>
                 </td>
                 <td>{p.category || '\u2014'}</td>
                 <td>
                   {p.expiryDate ? (
-                    <span className={`badge badge--${isExpired(p.expiryDate) ? 'danger' : 'ok'}`}>
+                    <Badge variant={expiryBadgeVariant(p.expiryDate)}>
                       {isExpired(p.expiryDate) ? 'Expired' : new Date(p.expiryDate).toLocaleDateString()}
-                    </span>
+                    </Badge>
                   ) : '\u2014'}
                 </td>
                 {canWrite && (
                   <td>
                     <div className="table__actions">
-                      <button className="btn btn--sm" onClick={() => openEdit(p)}>
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn--sm btn--danger"
-                        onClick={() => openDelete(p)}
-                      >
-                        Delete
-                      </button>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Edit</Button>
+                      <Button size="sm" variant="danger" onClick={() => openDelete(p)}>Delete</Button>
                     </div>
                   </td>
                 )}
@@ -182,132 +213,60 @@ export default function ProductsPage() {
         </table>
       </div>
 
-      {/* --- Add / Edit Modal --- */}
-      {modalOpen && (
-        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal__header">
-              <h3>{editing ? 'Edit Product' : 'Add Product'}</h3>
-              <button className="modal__close" onClick={() => setModalOpen(false)}>
-                &times;
-              </button>
-            </div>
-            <form onSubmit={handleSave}>
-              <div className="modal__body">
-                <label>
-                  SKU *
-                  <input value={form.sku} onChange={set('sku')} required />
-                </label>
-                <label>
-                  Name *
-                  <input value={form.name} onChange={set('name')} required />
-                </label>
-                <div className="form-row">
-                  <label>
-                    Price *
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={form.price}
-                      onChange={set('price')}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Stock
-                    <input
-                      type="number"
-                      min="0"
-                      value={form.stock}
-                      onChange={set('stock')}
-                    />
-                  </label>
-                </div>
-                <div className="form-row">
-                  <label>
-                    Category
-                    <input value={form.category} onChange={set('category')} />
-                  </label>
-                  <label>
-                    Expiry Date
-                    <input
-                      type="date"
-                      value={form.expiryDate}
-                      onChange={set('expiryDate')}
-                    />
-                  </label>
-                </div>
-                <label>
-                  Description
-                  <textarea
-                    rows={3}
-                    value={form.description}
-                    onChange={set('description')}
-                  />
-                </label>
-              </div>
-              <div className="modal__footer">
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => setModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn--primary" disabled={saving}>
-                  {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditing(null); setForm(emptyForm); }}
+        title={editing ? 'Edit Product' : 'Add Product'}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => { setModalOpen(false); setEditing(null); setForm(emptyForm); }}>Cancel</Button>
+            <Button type="submit" form="product-form" loading={saving}>
+              {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+            </Button>
+          </>
+        }
+      >
+        <form id="product-form" onSubmit={handleSave}>
+          <Input label="SKU" value={form.sku} onChange={set('sku')} required />
+          <Input label="Name" value={form.name} onChange={set('name')} required />
+          <div className="form-row">
+            <Input label="Price" type="number" step="0.01" min="0" value={form.price} onChange={set('price')} required />
+            <Input label="Stock" type="number" min="0" value={form.stock} onChange={set('stock')} />
           </div>
-        </div>
-      )}
+          <div className="form-row">
+            <Input label="Category" value={form.category} onChange={set('category')} />
+            <Input label="Expiry Date" type="date" value={form.expiryDate} onChange={set('expiryDate')} />
+          </div>
+          <Input label="Description" type="textarea" value={form.description} onChange={set('description')} rows={3} />
+        </form>
+      </Modal>
 
-      {/* --- Delete / Remove Confirm --- */}
-      {deleteTarget && (
-        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
-          <div className="modal modal--sm" onClick={(e) => e.stopPropagation()}>
-            <div className="modal__header">
-              <h3>Remove Product</h3>
-              <button className="modal__close" onClick={() => setDeleteTarget(null)}>
-                &times;
-              </button>
-            </div>
-            <div className="modal__body">
-              <p>
-                Remove <strong>{deleteTarget.name}</strong> from inventory?
-              </p>
-              <label>
-                Reason (optional)
-                <select value={removalReason} onChange={(e) => setRemovalReason(e.target.value)}>
-                  <option value="">No reason</option>
-                  <option value="expired">Expired</option>
-                  <option value="damaged">Damaged</option>
-                  <option value="low_demand">Low Demand</option>
-                </select>
-              </label>
-            </div>
-            <div className="modal__footer">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setDeleteTarget(null)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn--danger"
-                disabled={deleting}
-                onClick={handleDelete}
-              >
-                {deleting ? 'Removing...' : 'Remove'}
-              </button>
-            </div>
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Remove Product"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="danger" loading={deleting} onClick={handleDelete}>
+              {deleting ? 'Removing...' : 'Remove'}
+            </Button>
+          </>
+        }
+      >
+        <div className="confirm-modal">
+          <p>Remove <strong>{deleteTarget?.name}</strong> from inventory?</p>
+          <div style={{ marginTop: '0.75rem' }}>
+            <Select
+              label="Reason (optional)"
+              value={removalReason}
+              onChange={(e) => setRemovalReason(e.target.value)}
+              options={removalOptions}
+            />
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

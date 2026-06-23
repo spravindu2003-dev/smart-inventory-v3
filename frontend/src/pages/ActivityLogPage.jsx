@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { getData, getPagination, safeArray } from '../api/safeResponse';
 import { getActivities, getActivitySummary } from '../api/activities';
 import { useFetch } from '../hooks/useFetch';
+import StatCard from '../components/ui/StatCard';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
 
 const actionLabels = {
   LOGIN_SUCCESS: 'Login',
@@ -92,22 +95,10 @@ export default function ActivityLogPage() {
 
       {summary && (
         <div className="insights-grid" style={{ marginBottom: '1.25rem' }}>
-          <div className="insight-card">
-            <span className="insight-card__value">{summary.totalActivities}</span>
-            <span className="insight-card__label">Total Activities</span>
-          </div>
-          <div className="insight-card">
-            <span className="insight-card__value">{summary.todayActivities}</span>
-            <span className="insight-card__label">Today</span>
-          </div>
-          <div className="insight-card">
-            <span className="insight-card__value">{summary.loginActivitiesToday}</span>
-            <span className="insight-card__label">Logins Today</span>
-          </div>
-          <div className="insight-card">
-            <span className="insight-card__value">{summary.salesActivitiesToday}</span>
-            <span className="insight-card__label">Sales Today</span>
-          </div>
+          <StatCard value={summary.totalActivities} label="Total Activities" />
+          <StatCard value={summary.todayActivities} label="Today" />
+          <StatCard value={summary.loginActivitiesToday} label="Logins Today" />
+          <StatCard value={summary.salesActivitiesToday} label="Sales Today" />
         </div>
       )}
 
@@ -163,12 +154,14 @@ export default function ActivityLogPage() {
             {loading ? (
               <tr>
                 <td colSpan={4} className="table__empty">
-                  <div className="spinner" style={{ margin: '0 auto' }} />
+                  <Skeleton width="60%" height={16} />
                 </td>
               </tr>
             ) : safeArray(activities).length === 0 ? (
               <tr>
-                <td colSpan={4} className="table__empty">No activities recorded</td>
+                <td colSpan={4} className="table__empty">
+                  <EmptyState message="No activities recorded" />
+                </td>
               </tr>
             ) : (
               safeArray(activities).map((a) => (

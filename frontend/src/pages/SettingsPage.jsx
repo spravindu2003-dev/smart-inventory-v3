@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useFetch } from '../hooks/useFetch';
 import { getMyProfile, updateMyProfile } from '../api/users';
 import { changePassword } from '../api/auth';
+import Card from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import Skeleton from '../components/ui/Skeleton';
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { loading, run } = useFetch();
 
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '' });
   const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState('');
 
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwSaving, setPwSaving] = useState(false);
-  const [pwMsg, setPwMsg] = useState('');
 
   useEffect(() => {
     run(async (signal) => {
@@ -32,7 +36,6 @@ export default function SettingsPage() {
   async function handleProfileSave(e) {
     e.preventDefault();
     setSaving(true);
-    setSaveMsg('');
     try {
       const res = await updateMyProfile({
         firstName: form.firstName || null,
@@ -40,9 +43,9 @@ export default function SettingsPage() {
         email: form.email,
       });
       setProfile(res.data);
-      setSaveMsg('Profile updated successfully');
+      toast.success('Profile updated successfully');
     } catch (err) {
-      setSaveMsg(err.response?.data?.message || 'Update failed');
+      toast.error(err.response?.data?.message || 'Update failed');
     } finally {
       setSaving(false);
     }
@@ -51,17 +54,16 @@ export default function SettingsPage() {
   async function handlePasswordChange(e) {
     e.preventDefault();
     if (pwForm.newPassword !== pwForm.confirmPassword) {
-      setPwMsg('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
     setPwSaving(true);
-    setPwMsg('');
     try {
       await changePassword(pwForm.currentPassword, pwForm.newPassword);
-      setPwMsg('Password changed successfully');
+      toast.success('Password changed successfully');
       setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      setPwMsg(err.response?.data?.message || 'Password change failed');
+      toast.error(err.response?.data?.message || 'Password change failed');
     } finally {
       setPwSaving(false);
     }
@@ -72,7 +74,15 @@ export default function SettingsPage() {
   }
 
   if (loading && !profile) {
-    return <div className="page-center"><div className="spinner" /></div>;
+    return (
+      <div>
+        <h2 className="page-title">Settings</h2>
+        <Card>
+          <Skeleton width="180px" height={20} />
+          <div style={{ marginTop: 12 }}><Skeleton width="100%" height={40} count={3} /></div>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -80,93 +90,59 @@ export default function SettingsPage() {
       <h2 className="page-title">Settings</h2>
 
       <div className="rpt-grid" style={{ maxWidth: 720 }}>
-        {/* Profile Information */}
-        <div className="rpt-card rpt-card--wide">
+        <Card className="rpt-card--wide">
           <h3 className="rpt-card__title">Profile Information</h3>
-          {saveMsg && (
-            <div
-              className={`alert ${saveMsg === 'Profile updated successfully' ? 'alert--success' : 'alert--error'}`}
-              style={{ marginBottom: '0.75rem' }}
-            >
-              {saveMsg}
-            </div>
-          )}
           <form onSubmit={handleProfileSave}>
             <div className="form-row">
-              <label>
-                First Name
-                <input value={form.firstName} onChange={setField('firstName')} />
-              </label>
-              <label>
-                Last Name
-                <input value={form.lastName} onChange={setField('lastName')} />
-              </label>
+              <Input label="First Name" value={form.firstName} onChange={setField('firstName')} />
+              <Input label="Last Name" value={form.lastName} onChange={setField('lastName')} />
             </div>
-            <label>
-              Email
-              <input type="email" value={form.email} onChange={setField('email')} required />
-            </label>
+            <Input label="Email" type="email" value={form.email} onChange={setField('email')} required />
             <div style={{ marginTop: '1rem' }}>
-              <button type="submit" className="btn btn--primary" disabled={saving}>
+              <Button type="submit" loading={saving}>
                 {saving ? 'Saving...' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
 
-        {/* Change Password */}
-        <div className="rpt-card rpt-card--wide">
+        <Card className="rpt-card--wide">
           <h3 className="rpt-card__title">Change Password</h3>
-          {pwMsg && (
-            <div
-              className={`alert ${pwMsg === 'Password changed successfully' ? 'alert--success' : 'alert--error'}`}
-              style={{ marginBottom: '0.75rem' }}
-            >
-              {pwMsg}
-            </div>
-          )}
           <form onSubmit={handlePasswordChange}>
-            <label>
-              Current Password
-              <input
-                type="password"
-                value={pwForm.currentPassword}
-                onChange={(e) => setPwForm((p) => ({ ...p, currentPassword: e.target.value }))}
-                required
-              />
-            </label>
+            <Input
+              label="Current Password"
+              type="password"
+              value={pwForm.currentPassword}
+              onChange={(e) => setPwForm((p) => ({ ...p, currentPassword: e.target.value }))}
+              required
+            />
             <div className="form-row">
-              <label>
-                New Password
-                <input
-                  type="password"
-                  value={pwForm.newPassword}
-                  onChange={(e) => setPwForm((p) => ({ ...p, newPassword: e.target.value }))}
-                  required
-                  minLength={6}
-                />
-              </label>
-              <label>
-                Confirm Password
-                <input
-                  type="password"
-                  value={pwForm.confirmPassword}
-                  onChange={(e) => setPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
-                  required
-                  minLength={6}
-                />
-              </label>
+              <Input
+                label="New Password"
+                type="password"
+                value={pwForm.newPassword}
+                onChange={(e) => setPwForm((p) => ({ ...p, newPassword: e.target.value }))}
+                required
+                minLength={6}
+              />
+              <Input
+                label="Confirm Password"
+                type="password"
+                value={pwForm.confirmPassword}
+                onChange={(e) => setPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                required
+                minLength={6}
+              />
             </div>
             <div style={{ marginTop: '1rem' }}>
-              <button type="submit" className="btn btn--primary" disabled={pwSaving}>
+              <Button type="submit" loading={pwSaving}>
                 {pwSaving ? 'Changing...' : 'Change Password'}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
 
-        {/* Account Details */}
-        <div className="rpt-card rpt-card--wide">
+        <Card className="rpt-card--wide">
           <h3 className="rpt-card__title">Account Details</h3>
           <div className="rpt-insights">
             <div className="rpt-insight">
@@ -176,15 +152,15 @@ export default function SettingsPage() {
             <div className="rpt-insight">
               <span className="rpt-insight__label">Role</span>
               <span className="rpt-insight__value">
-                <span className="badge badge--role">{user?.role}</span>
+                <Badge variant="role">{user?.role}</Badge>
               </span>
             </div>
             <div className="rpt-insight">
               <span className="rpt-insight__label">Status</span>
               <span className="rpt-insight__value">
-                <span className={`badge badge--${profile?.isActive ? 'ok' : 'danger'}`}>
+                <Badge variant={profile?.isActive ? 'ok' : 'danger'}>
                   {profile?.isActive ? 'Active' : 'Disabled'}
-                </span>
+                </Badge>
               </span>
             </div>
             <div className="rpt-insight">
@@ -194,7 +170,7 @@ export default function SettingsPage() {
               </span>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );
