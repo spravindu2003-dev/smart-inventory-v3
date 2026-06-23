@@ -1390,3 +1390,15 @@ textarea.input-field__input {
   margin-top: 0.25rem;
   line-height: 1.25;
 }
+
+/* ============================================================
+   REMOVED PRODUCT ROW
+   ============================================================ */
+.row--removed {
+  background-color: #fef2f2;
+  opacity: 0.65;
+}
+
+.row--removed:hover {
+  opacity: 1;
+}

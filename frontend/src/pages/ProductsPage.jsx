@@ -39,6 +39,8 @@ export default function ProductsPage() {
   const [removalReason, setRemovalReason] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  const [filter, setFilter] = useState('all');
+
   const fetchProducts = useRef((signal) => {
     run(async (s) => {
       const res = await productsApi.getProducts(s);
@@ -165,6 +167,16 @@ export default function ProductsPage() {
     );
   }
 
+  function toggleFilter(val) {
+    setFilter(val);
+  }
+
+  const filtered = safeArray(products).filter((p) => {
+    if (filter === 'active') return !p.removedAt;
+    if (filter === 'removed') return !!p.removedAt;
+    return true;
+  });
+
   return (
     <div>
       <div className="page-header">
@@ -172,6 +184,22 @@ export default function ProductsPage() {
         {canWrite && (
           <Button onClick={openCreate}>+ Add Product</Button>
         )}
+      </div>
+
+      <div className="filters-bar">
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {['all', 'active', 'removed'].map((f) => (
+            <button
+              key={f}
+              type="button"
+              className={`btn btn--sm${filter === f ? ' btn--primary' : ' btn--ghost'}`}
+              onClick={() => toggleFilter(f)}
+              style={{ textTransform: 'capitalize' }}
+            >
+              {f === 'removed' ? 'Removed' : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="table-card">
@@ -184,19 +212,22 @@ export default function ProductsPage() {
               <th>Stock</th>
               <th>Category</th>
               <th>Expiry</th>
+              <th>Status</th>
               {canWrite && <th style={{ width: 100 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {safeArray(products).length === 0 && (
+            {filtered.length === 0 && (
               <tr>
-                <td colSpan={canWrite ? 7 : 6}>
-                  <EmptyState message="No products yet" />
+                <td colSpan={canWrite ? 8 : 7}>
+                  <EmptyState message={filter === 'removed' ? 'No removed products' : 'No products yet'} />
                 </td>
               </tr>
             )}
-            {safeArray(products).map((p) => (
-              <tr key={p.id}>
+            {filtered.map((p) => {
+              const isRemoved = !!p.removedAt;
+              return (
+              <tr key={p.id} className={isRemoved ? 'row--removed' : ''}>
                 <td className="table__sku">{p.sku}</td>
                 <td>{p.name}</td>
                 <td>${Number(p.price).toFixed(2)}</td>
@@ -211,16 +242,24 @@ export default function ProductsPage() {
                     </Badge>
                   ) : '\u2014'}
                 </td>
+                <td>
+                  {isRemoved ? (
+                    <Badge variant="danger">REMOVED</Badge>
+                  ) : (
+                    <Badge variant="ok">Active</Badge>
+                  )}
+                </td>
                 {canWrite && (
                   <td>
                     <div className="table__actions">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Edit</Button>
-                      <Button size="sm" variant="danger" onClick={() => openDelete(p)}>Delete</Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(p)} disabled={isRemoved}>Edit</Button>
+                      {!isRemoved && <Button size="sm" variant="danger" onClick={() => openDelete(p)}>Delete</Button>}
                     </div>
                   </td>
                 )}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
