@@ -66,6 +66,7 @@ router.put(
   [
     body('email').optional().isEmail().normalizeEmail(),
     body('role').optional().isIn(['owner', 'manager', 'cashier']),
+    validate,
   ],
   userController.update
 );

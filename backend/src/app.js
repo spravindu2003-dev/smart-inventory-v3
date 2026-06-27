@@ -62,13 +62,15 @@ app.use((_req, res, next) => {
 });
 
 // ========================
-// AUTO SUCCESS WRAPPER
+// AUTO SUCCESS WRAPPER (only for 2xx)
 // ========================
 app.use((_req, res, next) => {
   const originalJson = res.json.bind(res);
 
   res.json = function (body) {
     if (
+      res.statusCode >= 200 &&
+      res.statusCode < 300 &&
       body &&
       typeof body === "object" &&
       !Array.isArray(body) &&
@@ -102,6 +104,13 @@ app.use('/api/activities', require('./routes/activityRoutes'));
 app.use('/api/sales', require('./routes/saleRoutes'));
 app.use('/api/insights', require('./routes/insightsRoutes'));
 app.use('/api/reports', require('./routes/reportsRoutes'));
+
+// ========================
+// 404 HANDLER (unmatched API routes → JSON)
+// ========================
+app.use('/api', (_req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
+});
 
 // ========================
 // GLOBAL ERROR HANDLER

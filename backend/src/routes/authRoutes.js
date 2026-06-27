@@ -1,9 +1,18 @@
 const { Router } = require('express');
 const { body } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
 
 const router = Router();
+
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many login attempts. Try again later.' },
+});
 
 router.post(
   '/register',
@@ -19,6 +28,7 @@ router.post(
 
 router.post(
   '/login',
+  loginLimiter,
   [
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty(),
