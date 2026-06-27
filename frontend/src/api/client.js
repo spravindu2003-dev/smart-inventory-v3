@@ -1,7 +1,23 @@
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
+if (!API_URL) {
+  console.error("[API] ERROR: VITE_API_URL is not set. API calls will fail.");
+}
+
+const mode = API_URL && API_URL.includes("localhost")
+  ? "LOCAL"
+  : "CLOUD";
+
+if (API_URL && API_URL.includes("localhost") && import.meta.env.PROD) {
+  console.warn("[API] WARNING: Production build targeting localhost API");
+}
+
+console.log(`[API] Mode: ${import.meta.env.PROD ? "PRODUCTION" : "DEVELOPMENT"} | Target: ${mode} | URL: ${API_URL || "(not set)"}`);
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: API_URL,
 });
 
 api.interceptors.request.use((config) => {

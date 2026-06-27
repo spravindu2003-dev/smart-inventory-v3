@@ -17,35 +17,49 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ========================
-// CORS (PRODUCTION + VERCEL + LOCAL FIX)
+// CORS (PRODUCTION + CLOUDFLARE + VERCEL + LOCAL)
 // ========================
+const isDev = config.nodeEnv !== 'production';
+
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:3000",
   "http://127.0.0.1:5173",
-  "https://smart-inventory-capstone-v3.vercel.app"
+  ...config.corsOrigins,
 ];
+
+const originIsAllowed = (origin) =>
+  allowedOrigins.includes(origin) ||
+  origin.endsWith(".vercel.app") ||
+  origin.includes(".trycloudflare.com");
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow tools like Postman / server requests
       if (!origin) return callback(null, true);
-
-      // allow local + production + Vercel previews
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.endsWith(".vercel.app")
-      ) {
+      if (originIsAllowed(origin)) {
         return callback(null, true);
       }
-
-      console.log("❌ Blocked CORS origin:", origin);
-      return callback(new Error("CORS blocked"));
+      if (isDev) {
+        console.warn(`[CORS] Allowing unknown origin in dev mode: ${origin}`);
+        return callback(null, true);
+      }
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
   })
 );
+
+// Log incoming origin for debugging
+app.use((_req, res, next) => {
+  const origin = _req.headers.origin;
+  if (origin) {
+    console.log(`[CORS] Incoming origin: ${origin}`);
+  }
+  next();
+});
 
 // ========================
 // AUTO SUCCESS WRAPPER

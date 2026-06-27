@@ -13,10 +13,27 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    getMe()
-      .then((res) => setUser(res.data.user))
-      .catch(() => localStorage.removeItem('token'))
-      .finally(() => setLoading(false));
+
+    const controller = new AbortController();
+    const timeoutMs = 15000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    getMe(controller.signal)
+      .then((res) => {
+        setUser(res.data.user);
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setLoading(false);
+      });
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, []);
 
   const login = useCallback(async (email, password) => {

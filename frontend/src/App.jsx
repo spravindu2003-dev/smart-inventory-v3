@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,8 +16,8 @@ import SettingsPage from './pages/SettingsPage';
 import UserManagementPage from './pages/UserManagementPage';
 import NotFoundPage from './pages/NotFoundPage';
 
-function AuthGate({ children }) {
-  const { loading } = useAuth();
+function AuthGate() {
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -42,37 +42,45 @@ function AuthGate({ children }) {
     );
   }
 
-  return children;
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="sales" element={<SalesPage />} />
+        <Route path="insights" element={<InsightsPage />} />
+        <Route path="activities" element={<ActivityLogPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="users" element={<ProtectedRoute roles={['owner']}><UserManagementPage /></ProtectedRoute>} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  );
 }
 
 export default function App() {
   return (
     <AuthProvider>
       <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontSize: '0.875rem', borderRadius: 8, padding: '0.625rem 1rem' } }} />
-      <AuthGate>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-          <Route
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="products" element={<ProductsPage />} />
-            <Route path="sales" element={<SalesPage />} />
-            <Route path="insights" element={<InsightsPage />} />
-            <Route path="activities" element={<ActivityLogPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="users" element={<ProtectedRoute roles={['owner']}><UserManagementPage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
-        </Routes>
-      </AuthGate>
+      <AuthGate />
     </AuthProvider>
   );
 }

@@ -11,7 +11,8 @@
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "tunnel:info": "node scripts/tunnel-info.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
