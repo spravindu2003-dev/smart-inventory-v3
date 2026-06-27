@@ -8,7 +8,6 @@ import CommandPalette from './CommandPalette';
 
 export default function DashboardLayout() {
   const { user } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
 
   useEffect(() => {
@@ -24,9 +23,9 @@ export default function DashboardLayout() {
 
   return (
     <div className="dashboard">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar />
       <div className="dashboard__main">
-        <Topbar onMenuClick={() => setSidebarOpen((p) => !p)} onCmdOpen={() => setCmdOpen(true)} />
+        <Topbar onCmdOpen={() => setCmdOpen(true)} />
         <main className="dashboard__content">
           <Outlet context={{ user }} />
         </main>

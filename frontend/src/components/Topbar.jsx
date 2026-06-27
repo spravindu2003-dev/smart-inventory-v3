@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function Topbar({ onMenuClick, onCmdOpen }) {
+export default function Topbar({ onCmdOpen }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,12 +18,13 @@ export default function Topbar({ onMenuClick, onCmdOpen }) {
 
   return (
     <header className="topbar">
-      <button className="topbar__hamburger" onClick={onMenuClick}>
-        {'\u2630'}
-      </button>
-      <button className="topbar__cmd-btn" onClick={onCmdOpen} title="Search (Ctrl+K)">
+      <span className="topbar__brand">
+        <span className="topbar__brand-icon">{'\u25C8'}</span>
+        <span className="topbar__brand-title">Smart Inventory</span>
+      </span>
+      <button className="topbar__cmd-btn" onClick={onCmdOpen} title="Quick Actions (Ctrl+K)">
         <span className="topbar__cmd-icon">&#128269;</span>
-        <span className="topbar__cmd-text">Search</span>
+        <span className="topbar__cmd-text">Actions</span>
         <kbd className="topbar__cmd-kbd">Ctrl+K</kbd>
       </button>
       <div className="topbar__spacer" />

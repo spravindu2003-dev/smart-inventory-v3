@@ -2,17 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const routes = [
-  { to: '/dashboard', label: 'Go to Dashboard', icon: '\u2302', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/dashboard/products', label: 'View Products', icon: '\u2630', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/dashboard/sales', label: 'View Sales', icon: '\u2637', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/dashboard/insights', label: 'View Insights', icon: '\u2606', roles: ['owner', 'manager'] },
-  { to: '/dashboard/activities', label: 'View Activity Log', icon: '\u2691', roles: ['owner', 'manager'] },
-  { to: '/dashboard/reports', label: 'Open Reports', icon: '\u2261', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/dashboard/settings', label: 'Settings', icon: '\u2699', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/dashboard/users', label: 'User Management', icon: '\u263A', roles: ['owner'] },
-];
-
 const actions = [
   { id: 'add-product', label: 'Add Product', icon: '+', route: '/dashboard/products' },
   { id: 'create-sale', label: 'Create Sale', icon: '+', route: '/dashboard/sales' },
@@ -27,10 +16,12 @@ export default function CommandPalette({ open, onClose }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
 
-  const filteredRoutes = routes.filter((r) => r.roles.includes(user?.role) && (!query || r.label.toLowerCase().includes(query.toLowerCase())));
-  const filteredActions = actions.filter((a) => (!query || a.label.toLowerCase().includes(query.toLowerCase())));
-  const allItems = [...filteredActions, ...filteredRoutes];
-  const selected = allItems[selectedIndex];
+  const filtered = actions.filter((a) => {
+    if (!query) return true;
+    return a.label.toLowerCase().includes(query.toLowerCase());
+  });
+
+  const selected = filtered[selectedIndex];
 
   useEffect(() => {
     if (open) {
@@ -41,17 +32,13 @@ export default function CommandPalette({ open, onClose }) {
   }, [open]);
 
   const handleKeyDown = useCallback((e) => {
-    if (!open && (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
-      e.preventDefault();
-      return;
-    }
     if (!open) return;
 
     switch (e.key) {
       case 'ArrowDown':
       case 'Tab':
         e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, allItems.length - 1));
+        setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -61,7 +48,7 @@ export default function CommandPalette({ open, onClose }) {
         e.preventDefault();
         if (selected) {
           onClose();
-          navigate(selected.route || selected.to);
+          navigate(selected.route);
         }
         break;
       case 'Escape':
@@ -69,18 +56,7 @@ export default function CommandPalette({ open, onClose }) {
         onClose();
         break;
     }
-  }, [open, selected, navigate, onClose, allItems.length]);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        if (open) onClose();
-      }
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [open, selected, navigate, onClose, filtered.length]);
 
   useEffect(() => {
     if (open) {
@@ -101,7 +77,7 @@ export default function CommandPalette({ open, onClose }) {
             ref={inputRef}
             className="cmd-input"
             type="text"
-            placeholder="Search pages and actions..."
+            placeholder="Search quick actions..."
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
           />
@@ -109,47 +85,24 @@ export default function CommandPalette({ open, onClose }) {
         </div>
 
         <div className="cmd-results">
-          {allItems.length === 0 && (
-            <div className="cmd-empty">No results found</div>
+          {filtered.length === 0 && (
+            <div className="cmd-empty">No actions found</div>
           )}
 
-          {filteredActions.length > 0 && (
+          {filtered.length > 0 && (
             <div className="cmd-group">
               <div className="cmd-group__label">Quick Actions</div>
-              {filteredActions.map((a, i) => {
-                const idx = allItems.indexOf(a);
-                return (
-                  <button
-                    key={a.id}
-                    className={`cmd-item${idx === selectedIndex ? ' cmd-item--selected' : ''}`}
-                    onClick={() => { onClose(); navigate(a.route); }}
-                    onMouseEnter={() => setSelectedIndex(idx)}
-                  >
-                    <span className="cmd-item__icon cmd-item__icon--action">{a.icon}</span>
-                    <span>{a.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {filteredRoutes.length > 0 && (
-            <div className="cmd-group">
-              <div className="cmd-group__label">Navigate to</div>
-              {filteredRoutes.map((r, i) => {
-                const idx = allItems.indexOf(r);
-                return (
-                  <button
-                    key={r.to}
-                    className={`cmd-item${idx === selectedIndex ? ' cmd-item--selected' : ''}`}
-                    onClick={() => { onClose(); navigate(r.to); }}
-                    onMouseEnter={() => setSelectedIndex(idx)}
-                  >
-                    <span className="cmd-item__icon">{r.icon}</span>
-                    <span>{r.label}</span>
-                  </button>
-                );
-              })}
+              {filtered.map((a, i) => (
+                <button
+                  key={a.id}
+                  className={`cmd-item${i === selectedIndex ? ' cmd-item--selected' : ''}`}
+                  onClick={() => { onClose(); navigate(a.route); }}
+                  onMouseEnter={() => setSelectedIndex(i)}
+                >
+                  <span className="cmd-item__icon cmd-item__icon--action">{a.icon}</span>
+                  <span>{a.label}</span>
+                </button>
+              ))}
             </div>
           )}
         </div>

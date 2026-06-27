@@ -3,6 +3,7 @@ import { Navigate, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { registerUser } from '../api/auth';
+import AuthLayout from '../components/AuthLayout';
 
 export default function SignupPage() {
   const { user } = useAuth();
@@ -35,58 +36,33 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="page-center">
-      <div className="login-card">
-        <div className="login-card__header">
-          <span className="login-card__icon">{'\u25C8'}</span>
-          <h1>Owner Onboarding</h1>
-          <p>Create your business account to get started</p>
+    <AuthLayout title="Owner Onboarding" subtitle="Create your business account to get started">
+      <form onSubmit={handleSubmit} className="auth-form">
+        {error && <div className="alert alert--error">{error}</div>}
+
+        <div className="input-field">
+          <label className="input-field__label">Username</label>
+          <input className="input-field__input" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} autoFocus />
         </div>
-        <form onSubmit={handleSubmit} className="login-card__form">
-          {error && <div className="alert alert--error">{error}</div>}
-          <label>
-            Username
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              minLength={3}
-              autoFocus
-            />
-          </label>
-          <label>
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-          </label>
-          <button type="submit" className="btn btn--primary" disabled={submitting}>
-            {submitting ? 'Creating account...' : 'Create Account'}
-          </button>
-          <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-              Already have an account?{' '}
-            </span>
-            <Link to="/login" style={{ color: 'var(--color-primary)', fontSize: '0.875rem' }}>
-              Sign In
-            </Link>
-          </div>
-        </form>
-      </div>
-    </div>
+
+        <div className="input-field">
+          <label className="input-field__label">Email</label>
+          <input className="input-field__input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+
+        <div className="input-field">
+          <label className="input-field__label">Password</label>
+          <input className="input-field__input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+        </div>
+
+        <button type="submit" className="btn btn--primary" disabled={submitting}>
+          {submitting ? 'Creating account...' : 'Create Account'}
+        </button>
+
+        <p className="auth-signup">
+          Already have an account? <Link to="/login">Sign In</Link>
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

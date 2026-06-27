@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AuthLayout from '../components/AuthLayout';
 
 export default function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = '/dashboard';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,7 +13,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (user) {
-    return <Navigate to={from} replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (e) => {
@@ -23,7 +22,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate(from, { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {
@@ -32,44 +31,32 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="page-center">
-      <div className="login-card">
-        <div className="login-card__header">
-          <span className="login-card__icon">{'\u25C8'}</span>
-          <h1>Smart Inventory</h1>
-          <p>Sign in to your account</p>
+    <AuthLayout title="Sign in to your account" subtitle="Enter your credentials to access the dashboard">
+      <form onSubmit={handleSubmit} className="auth-form">
+        {error && <div className="alert alert--error">{error}</div>}
+
+        <div className="input-field">
+          <label className="input-field__label">Email</label>
+          <input className="input-field__input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
         </div>
-        <form onSubmit={handleSubmit} className="login-card__form">
-          {error && <div className="alert alert--error">{error}</div>}
-          <label>
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoFocus
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
-          <button type="submit" className="btn btn--primary" disabled={submitting}>
-            {submitting ? 'Signing in...' : 'Sign in'}
-          </button>
-          <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
-            <Link to="/forgot-password" style={{ color: 'var(--color-primary)', fontSize: '0.875rem' }}>
-              Forgot Password?
-            </Link>
-          </div>
-        </form>
-      </div>
-    </div>
+
+        <div className="input-field">
+          <label className="input-field__label">Password</label>
+          <input className="input-field__input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+
+        <button type="submit" className="btn btn--primary" disabled={submitting}>
+          {submitting ? 'Signing in...' : 'Sign in'}
+        </button>
+
+        <div className="auth-links">
+          <Link to="/forgot-password">Forgot Password?</Link>
+        </div>
+
+        <p className="auth-signup">
+          Don&rsquo;t have an account? <Link to="/signup">Join as Owner</Link>
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

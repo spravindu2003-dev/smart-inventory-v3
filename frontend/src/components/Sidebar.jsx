@@ -11,36 +11,32 @@ const links = [
   { to: '/dashboard/users', label: 'Users', icon: '\u263A', roles: ['owner'] },
 ];
 
-export default function Sidebar({ open, onClose }) {
+export default function Sidebar() {
   const { user } = useAuth();
 
   const visible = links.filter((l) => l.roles.includes(user?.role));
 
   return (
-    <>
-      {open && <div className="sidebar-overlay" onClick={onClose} />}
-      <aside className={`sidebar ${open ? 'sidebar--open' : ''}`}>
-        <div className="sidebar__header">
-          <span className="sidebar__logo">{'\u25C8'}</span>
-          <span className="sidebar__title">Inventory</span>
-        </div>
-        <nav className="sidebar__nav">
-          {visible.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.to === '/dashboard'}
-              className={({ isActive }) =>
-                `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
-              }
-              onClick={onClose}
-            >
-              <span className="sidebar__icon">{l.icon}</span>
-              {l.label}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
-    </>
+    <aside className="sidebar">
+      <div className="sidebar__header">
+        <span className="sidebar__logo">{'\u25C8'}</span>
+        <span className="sidebar__title">Inventory</span>
+      </div>
+      <nav className="sidebar__nav">
+        {visible.map((l) => (
+          <NavLink
+            key={l.to}
+            to={l.to}
+            end={l.to === '/dashboard'}
+            className={({ isActive }) =>
+              `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
+            }
+          >
+            <span className="sidebar__icon">{l.icon}</span>
+            {l.label}
+          </NavLink>
+        ))}
+      </nav>
+    </aside>
   );
 }
