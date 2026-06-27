@@ -6,3 +6,7 @@ dist/
 # local overrides (not committed)
 .env.local
 .env.*.local
+
+
+#gemini said
+.env.production
