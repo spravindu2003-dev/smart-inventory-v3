@@ -1,9 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { OnboardingProvider } from './context/OnboardingContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
+import OnboardingWizard from './components/OnboardingWizard';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
@@ -16,46 +20,33 @@ import SettingsPage from './pages/SettingsPage';
 import UserManagementPage from './pages/UserManagementPage';
 import NotFoundPage from './pages/NotFoundPage';
 
-function AuthGate() {
+function LoadingScreen() {
+  return (
+    <div className="loading-screen">
+      <div className="loading-screen__spinner" />
+    </div>
+  );
+}
+
+function AppRoutes() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: 'var(--color-bg, #f9fafb)',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div
-            className="skeleton"
-            style={{ width: 220, height: 22, margin: '0 auto 16px', borderRadius: 6 }}
-          />
-          <div
-            className="skeleton"
-            style={{ width: 160, height: 14, margin: '0 auto', borderRadius: 6 }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <Routes>
+      {/* PUBLIC ROUTES */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+      <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password/:token" element={user ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />} />
+
+      {/* PROTECTED DASHBOARD ROUTES */}
       <Route
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <DashboardLayout />
@@ -72,7 +63,19 @@ function AuthGate() {
         <Route path="users" element={<ProtectedRoute roles={['owner']}><UserManagementPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
+
+      {/* CATCH ALL — redirect to landing */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+  );
+}
+
+function AppContent() {
+  return (
+    <OnboardingProvider>
+      <AppRoutes />
+      <OnboardingWizard />
+    </OnboardingProvider>
   );
 }
 
@@ -80,7 +83,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontSize: '0.875rem', borderRadius: 8, padding: '0.625rem 1rem' } }} />
-      <AuthGate />
+      <AppContent />
     </AuthProvider>
   );
 }

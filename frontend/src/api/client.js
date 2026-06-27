@@ -14,8 +14,6 @@ if (API_URL && API_URL.includes("localhost") && import.meta.env.PROD) {
   console.warn("[API] WARNING: Production build targeting localhost API");
 }
 
-console.log(`[API] Mode: ${import.meta.env.PROD ? "PRODUCTION" : "DEVELOPMENT"} | Target: ${mode} | URL: ${API_URL || "(not set)"}`);
-
 const api = axios.create({
   baseURL: API_URL,
 });

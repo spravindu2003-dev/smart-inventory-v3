@@ -2,13 +2,13 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const links = [
-  { to: '/', label: 'Dashboard', icon: '\u2302', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/products', label: 'Products', icon: '\u2630', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/sales', label: 'Sales', icon: '\u2637', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/insights', label: 'Insights', icon: '\u2606', roles: ['owner', 'manager'] },
-  { to: '/activities', label: 'Activity Log', icon: '\u2691', roles: ['owner', 'manager'] },
-  { to: '/reports', label: 'Reports', icon: '\u2261', roles: ['owner', 'manager', 'cashier'] },
-  { to: '/users', label: 'Users', icon: '\u263A', roles: ['owner'] },
+  { to: '/dashboard', label: 'Dashboard', icon: '\u2302', roles: ['owner', 'manager', 'cashier'] },
+  { to: '/dashboard/products', label: 'Products', icon: '\u2630', roles: ['owner', 'manager', 'cashier'] },
+  { to: '/dashboard/sales', label: 'Sales', icon: '\u2637', roles: ['owner', 'manager', 'cashier'] },
+  { to: '/dashboard/insights', label: 'Insights', icon: '\u2606', roles: ['owner', 'manager'] },
+  { to: '/dashboard/activities', label: 'Activity Log', icon: '\u2691', roles: ['owner', 'manager'] },
+  { to: '/dashboard/reports', label: 'Reports', icon: '\u2261', roles: ['owner', 'manager', 'cashier'] },
+  { to: '/dashboard/users', label: 'Users', icon: '\u263A', roles: ['owner'] },
 ];
 
 export default function Sidebar({ open, onClose }) {
@@ -29,7 +29,7 @@ export default function Sidebar({ open, onClose }) {
             <NavLink
               key={l.to}
               to={l.to}
-              end={l.to === '/'}
+              end={l.to === '/dashboard'}
               className={({ isActive }) =>
                 `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
               }

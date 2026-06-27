@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function Topbar({ onMenuClick }) {
+export default function Topbar({ onMenuClick, onCmdOpen }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,6 +21,11 @@ export default function Topbar({ onMenuClick }) {
       <button className="topbar__hamburger" onClick={onMenuClick}>
         {'\u2630'}
       </button>
+      <button className="topbar__cmd-btn" onClick={onCmdOpen} title="Search (Ctrl+K)">
+        <span className="topbar__cmd-icon">&#128269;</span>
+        <span className="topbar__cmd-text">Search</span>
+        <kbd className="topbar__cmd-kbd">Ctrl+K</kbd>
+      </button>
       <div className="topbar__spacer" />
       <div className="topbar__user" ref={ref}>
         <button
@@ -37,7 +42,7 @@ export default function Topbar({ onMenuClick }) {
               <span className="topbar__role">{user?.role}</span>
             </div>
             <hr />
-            <button className="topbar__dropdown-item" onClick={() => { setMenuOpen(false); navigate('/settings'); }}>
+            <button className="topbar__dropdown-item" onClick={() => { setMenuOpen(false); navigate('/dashboard/settings'); }}>
               {'\u2699'} Settings
             </button>
             <hr />
