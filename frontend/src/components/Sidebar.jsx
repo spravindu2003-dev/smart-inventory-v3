@@ -1,3 +1,12 @@
+
+/*
+ * ARCHITECTURE RULE: Desktop-only navigation
+ *   Sidebar is ONLY rendered on devices ≥769px (see DashboardLayout).
+ *   On mobile (<769px) it is NOT rendered at all — BottomNav is used instead.
+ *
+ *   Links are role-filtered at render time using user.role.
+ *   No hamburger, no overlay — Sidebar is a fixed left panel on desktop.
+ */
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 

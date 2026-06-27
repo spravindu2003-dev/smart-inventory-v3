@@ -1,3 +1,20 @@
+/*
+ * ARCHITECTURE RULES — App Entry Point
+ *
+ * 1. Auth pages (/login, /signup, /forgot-password, /reset-password)
+ *    MUST use the shared <AuthLayout> wrapper — no inline layout logic.
+ *
+ * 2. Protected dashboard routes are nested under /dashboard/*
+ *    and rendered inside DashboardLayout, which enforces the
+ *    device-specific navigation system (Sidebar for desktop,
+ *    BottomNav for mobile).
+ *
+ * 3. OnboardingWizard is rendered outside routes so it overlays
+ *    any page when active. It is gated by OnboardingProvider.
+ *
+ * 4. Toaster is rendered once at root level — no duplicate toast
+ *    containers anywhere in the tree.
+ */
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -37,14 +54,14 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* PUBLIC ROUTES */}
+      {/* PUBLIC ROUTES — always use AuthLayout wrapper */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
       <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={user ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />} />
 
-      {/* PROTECTED DASHBOARD ROUTES */}
+      {/* PROTECTED DASHBOARD ROUTES — nested under DashboardLayout for nav enforcement */}
       <Route
         path="/dashboard"
         element={
@@ -71,6 +88,11 @@ function AppRoutes() {
 }
 
 function AppContent() {
+  /*
+   * OnboardingProvider wraps routes so onboarding state is available
+   * to all pages. OnboardingWizard renders as a fixed overlay when
+   * the owner starts the onboarding flow.
+   */
   return (
     <OnboardingProvider>
       <AppRoutes />
