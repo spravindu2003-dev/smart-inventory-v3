@@ -5,3 +5,4 @@ dist/
 
 # Backend secrets (contains database credentials, JWT secret — do NOT commit)
 /backend/.env
+.vercel
