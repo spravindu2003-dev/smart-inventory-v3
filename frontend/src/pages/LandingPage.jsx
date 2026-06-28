@@ -92,7 +92,6 @@ export default function LandingPage() {
           </div>
           <div className="landing-nav__links">
             <Link to="/login" className="btn btn--ghost landing-nav__btn">Sign In</Link>
-            <Link to="/signup" className="btn btn--primary landing-nav__btn">Get Started</Link>
           </div>
         </div>
       </nav>
@@ -106,8 +105,8 @@ export default function LandingPage() {
           <h1 className="hero__title">Smart Inventory System</h1>
           <p className="hero__subtitle">Manage stock, sales, users, and insights in real time</p>
           <div className="hero__actions">
-            <Link to="/login" className="btn btn--primary hero__btn">Sign In</Link>
-            <Link to="/signup" className="btn btn--ghost hero__btn hero__btn--ghost">Join as Owner</Link>
+            <Link to="/signup" className="btn btn--primary hero__btn hero__btn--primary">Get Started</Link>
+            <Link to="/login" className="btn btn--ghost hero__btn hero__btn--ghost">Sign In</Link>
           </div>
         </div>
       </section>
@@ -155,12 +154,6 @@ export default function LandingPage() {
           <p>&copy; {new Date().getFullYear()} Smart Inventory System. All rights reserved.</p>
         </div>
       </footer>
-
-      {/* Mobile sticky bottom CTA bar */}
-      <div className="landing-sticky-cta">
-        <Link to="/login" className="btn btn--primary landing-sticky-cta__btn">Sign In</Link>
-        <Link to="/signup" className="btn btn--ghost landing-sticky-cta__btn">Join as Owner</Link>
-      </div>
     </div>
   );
 }
