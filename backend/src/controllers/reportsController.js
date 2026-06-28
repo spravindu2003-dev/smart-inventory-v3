@@ -2,8 +2,10 @@ const prisma = require('../utils/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 
 exports.salesTrend = async (req, res) => {
+  const bId = req.user.businessId;
   const days = parseInt(req.query.days) || undefined;
-  const where = days ? { createdAt: { gte: new Date(Date.now() - days * 86400000) } } : {};
+  const where = { businessId: bId };
+  if (days) where.createdAt = { gte: new Date(Date.now() - days * 86400000) };
 
   const sales = await prisma.sale.findMany({
     where,
@@ -22,8 +24,10 @@ exports.salesTrend = async (req, res) => {
 };
 
 exports.revenueTrend = async (req, res) => {
+  const bId = req.user.businessId;
   const days = parseInt(req.query.days) || undefined;
-  const where = days ? { createdAt: { gte: new Date(Date.now() - days * 86400000) } } : {};
+  const where = { businessId: bId };
+  if (days) where.createdAt = { gte: new Date(Date.now() - days * 86400000) };
 
   const sales = await prisma.sale.findMany({
     where,
@@ -47,6 +51,7 @@ exports.topProducts = async (req, res) => {
   const skip = (page - 1) * limit;
 
   const products = await prisma.product.findMany({
+    where: { businessId: req.user.businessId },
     select: { id: true, name: true, sku: true, saleItems: { select: { quantity: true } } },
   });
 
@@ -68,23 +73,25 @@ exports.topProducts = async (req, res) => {
   });
 };
 
-exports.stockDistribution = async (_req, res) => {
+exports.stockDistribution = async (req, res) => {
+  const bId = req.user.businessId;
   const now = new Date();
   const [inStock, lowStock, outOfStock, expired] = await Promise.all([
-    prisma.product.count({ where: { stock: { gt: 10 } } }),
-    prisma.product.count({ where: { stock: { gte: 1, lte: 10 } } }),
-    prisma.product.count({ where: { stock: 0 } }),
-    prisma.product.count({ where: { expiryDate: { lt: now } } }),
+    prisma.product.count({ where: { businessId: bId, stock: { gt: 10 } } }),
+    prisma.product.count({ where: { businessId: bId, stock: { gte: 1, lte: 10 } } }),
+    prisma.product.count({ where: { businessId: bId, stock: 0 } }),
+    prisma.product.count({ where: { businessId: bId, expiryDate: { lt: now } } }),
   ]);
 
   res.json({ inStock, lowStock, outOfStock, expired });
 };
 
-exports.categoryDistribution = async (_req, res) => {
+exports.categoryDistribution = async (req, res) => {
+  const bId = req.user.businessId;
   const grouped = await prisma.product.groupBy({
     by: ['category'],
     _count: { id: true },
-    where: { category: { not: null } },
+    where: { businessId: bId, category: { not: null } },
     orderBy: { _count: { id: 'desc' } },
   });
 
@@ -93,33 +100,35 @@ exports.categoryDistribution = async (_req, res) => {
     count: g._count.id,
   }));
 
-  const uncategorized = await prisma.product.count({ where: { category: null } });
+  const uncategorized = await prisma.product.count({ where: { businessId: bId, category: null } });
   if (uncategorized > 0) distribution.push({ category: 'Uncategorized', count: uncategorized });
 
   res.json({ distribution });
 };
 
-exports.quickInsights = async (_req, res) => {
+exports.quickInsights = async (req, res) => {
+  const bId = req.user.businessId;
   const now = new Date();
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
 
   const [allProducts, lowStockProducts, expiredCount, salesAgg, recentSales, olderSales] =
     await Promise.all([
       prisma.product.findMany({
+        where: { businessId: bId },
         select: { id: true, name: true, saleItems: { select: { quantity: true } } },
       }),
       prisma.product.findMany({
-        where: { stock: { gte: 1, lte: 10 } },
+        where: { businessId: bId, stock: { gte: 1, lte: 10 } },
         select: { name: true, stock: true },
       }),
-      prisma.product.count({ where: { expiryDate: { lt: now } } }),
-      prisma.sale.aggregate({ _avg: { total: true }, _count: true }),
+      prisma.product.count({ where: { businessId: bId, expiryDate: { lt: now } } }),
+      prisma.sale.aggregate({ where: { businessId: bId }, _avg: { total: true }, _count: true }),
       prisma.sale.findMany({
-        where: { createdAt: { gte: sevenDaysAgo } },
+        where: { businessId: bId, createdAt: { gte: sevenDaysAgo } },
         select: { total: true },
       }),
       prisma.sale.findMany({
-        where: { createdAt: { lt: sevenDaysAgo } },
+        where: { businessId: bId, createdAt: { lt: sevenDaysAgo } },
         select: { total: true },
       }),
     ]);
@@ -161,10 +170,11 @@ exports.quickInsights = async (_req, res) => {
   });
 };
 
-exports.activityDistribution = async (_req, res) => {
+exports.activityDistribution = async (req, res) => {
   const grouped = await prisma.activityLog.groupBy({
     by: ['action'],
     _count: { action: true },
+    where: { businessId: req.user.businessId },
     orderBy: { _count: { action: 'desc' } },
   });
 

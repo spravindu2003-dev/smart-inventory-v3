@@ -312,7 +312,7 @@ export default function SalesPage() {
                     hour: '2-digit', minute: '2-digit',
                   })}
                 </td>
-                <td>{sale.user?.username || '\u2014'}</td>
+                <td>{sale.user?.name || '\u2014'}</td>
                 <td>{sale.items?.length || 0}</td>
                 <td>${Number(sale.total).toFixed(2)}</td>
                 {canManage && (

@@ -12,7 +12,7 @@ exports.create = async (req, res) => {
 
   const productIds = items.map((i) => i.productId);
   const products = await prisma.product.findMany({
-    where: { id: { in: productIds } },
+    where: { id: { in: productIds }, businessId: req.user.businessId },
   });
 
   const productMap = {};
@@ -54,6 +54,7 @@ exports.create = async (req, res) => {
       data: {
         total,
         userId: req.user.id,
+        businessId: req.user.businessId,
         items: { create: saleItemsData },
       },
       include: {
@@ -77,6 +78,7 @@ exports.create = async (req, res) => {
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'SALE_CREATED',
     entity: 'Sale',
     entityId: sale.id,
@@ -91,19 +93,22 @@ exports.getAll = async (req, res) => {
   const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
   const skip = (page - 1) * limit;
 
+  const whereSales = { businessId: req.user.businessId };
+
   const [sales, total] = await Promise.all([
     prisma.sale.findMany({
+      where: whereSales,
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
       include: {
-        user: { select: { id: true, username: true } },
+        user: { select: { id: true, name: true } },
         items: {
           include: { product: { select: { id: true, name: true, sku: true, price: true } } },
         },
       },
     }),
-    prisma.sale.count(),
+    prisma.sale.count({ where: whereSales }),
   ]);
 
   res.json({
@@ -120,8 +125,8 @@ exports.update = async (req, res) => {
     return res.status(400).json({ message: 'Items array is required and must not be empty' });
   }
 
-  const existing = await prisma.sale.findUnique({
-    where: { id },
+  const existing = await prisma.sale.findFirst({
+    where: { id, businessId: req.user.businessId },
     include: { items: true },
   });
 
@@ -129,7 +134,7 @@ exports.update = async (req, res) => {
 
   const productIds = items.map((i) => i.productId);
   const products = await prisma.product.findMany({
-    where: { id: { in: productIds } },
+    where: { id: { in: productIds }, businessId: req.user.businessId },
   });
 
   const productMap = {};
@@ -205,6 +210,7 @@ exports.update = async (req, res) => {
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'SALE_UPDATED',
     entity: 'Sale',
     entityId: sale.id,
@@ -217,8 +223,8 @@ exports.update = async (req, res) => {
 exports.undo = async (req, res) => {
   const id = Number(req.params.id);
 
-  const sale = await prisma.sale.findUnique({
-    where: { id },
+  const sale = await prisma.sale.findFirst({
+    where: { id, businessId: req.user.businessId },
     include: { items: true },
   });
 
@@ -238,6 +244,7 @@ exports.undo = async (req, res) => {
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'SALE_UNDONE',
     entity: 'Sale',
     entityId: id,
@@ -250,10 +257,10 @@ exports.undo = async (req, res) => {
 exports.getById = async (req, res) => {
   const id = Number(req.params.id);
 
-  const sale = await prisma.sale.findUnique({
-    where: { id },
+  const sale = await prisma.sale.findFirst({
+    where: { id, businessId: req.user.businessId },
     include: {
-      user: { select: { id: true, username: true } },
+      user: { select: { id: true, name: true } },
       items: {
         include: { product: { select: { id: true, name: true, sku: true, price: true } } },
       },

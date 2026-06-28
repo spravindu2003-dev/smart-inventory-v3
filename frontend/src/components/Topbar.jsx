@@ -33,12 +33,12 @@ export default function Topbar({ onCmdOpen }) {
           className="topbar__avatar"
           onClick={() => setMenuOpen((p) => !p)}
         >
-          {user?.username?.charAt(0).toUpperCase()}
+          {user?.name?.charAt(0).toUpperCase()}
         </button>
         {menuOpen && (
           <div className="topbar__dropdown">
             <div className="topbar__dropdown-info">
-              <strong>{user?.username}</strong>
+              <strong>{user?.name}</strong>
               <span>{user?.email}</span>
               <span className="topbar__role">{user?.role}</span>
             </div>

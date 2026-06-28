@@ -16,7 +16,7 @@ export const getUsers = (params, signal) => {
 };
 
 export const createUser = (data, signal) =>
-  api.post('/users', data, { signal });
+  api.post('/users/create', data, { signal });
 
 export const updateUser = (id, data, signal) =>
   api.put(`/users/${id}`, data, { signal });

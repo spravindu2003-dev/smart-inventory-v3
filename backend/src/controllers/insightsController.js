@@ -1,7 +1,9 @@
 const prisma = require('../utils/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 
-exports.summary = async (_req, res) => {
+exports.summary = async (req, res) => {
+  const bId = req.user.businessId;
+
   const [
     totalProducts,
     totalStock,
@@ -17,17 +19,17 @@ exports.summary = async (_req, res) => {
     outOfStockItemsCount,
     expiredProductsCount,
   ] = await Promise.all([
-    prisma.product.count(),
-    prisma.product.aggregate({ _sum: { stock: true } }),
-    prisma.product.count({ where: { stock: { lte: 10 } } }),
+    prisma.product.count({ where: { businessId: bId } }),
+    prisma.product.aggregate({ where: { businessId: bId }, _sum: { stock: true } }),
+    prisma.product.count({ where: { businessId: bId, stock: { lte: 10 } } }),
     prisma.product.count({
-      where: { saleItems: { none: {} } },
+      where: { businessId: bId, saleItems: { none: {} } },
     }),
     prisma.activityLog.count({
-      where: { createdAt: { gte: new Date(Date.now() - 86400000) } },
+      where: { businessId: bId, createdAt: { gte: new Date(Date.now() - 86400000) } },
     }),
-    prisma.sale.aggregate({ _sum: { total: true } }),
-    prisma.sale.count(),
+    prisma.sale.aggregate({ where: { businessId: bId }, _sum: { total: true } }),
+    prisma.sale.count({ where: { businessId: bId } }),
     prisma.saleItem.aggregate({ _sum: { quantity: true } }),
     prisma.saleItem.groupBy({
       by: ['productId'],
@@ -36,26 +38,27 @@ exports.summary = async (_req, res) => {
       take: 5,
     }),
     prisma.sale.findMany({
+      where: { businessId: bId },
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { username: true } },
+        user: { select: { name: true } },
         items: {
           include: { product: { select: { id: true, name: true, sku: true } } },
         },
       },
     }),
-    prisma.product.count({ where: { stock: { gte: 1, lte: 10 } } }),
-    prisma.product.count({ where: { stock: 0 } }),
+    prisma.product.count({ where: { businessId: bId, stock: { gte: 1, lte: 10 } } }),
+    prisma.product.count({ where: { businessId: bId, stock: 0 } }),
     prisma.product.count({
-      where: { expiryDate: { lt: new Date() }, NOT: { expiryDate: null } },
+      where: { businessId: bId, expiryDate: { lt: new Date() }, NOT: { expiryDate: null } },
     }),
   ]);
 
   const productIds = topSellingAgg.map((t) => t.productId);
   const products = productIds.length > 0
     ? await prisma.product.findMany({
-        where: { id: { in: productIds } },
+        where: { id: { in: productIds }, businessId: bId },
         select: { id: true, name: true, sku: true },
       })
     : [];
@@ -93,6 +96,7 @@ exports.mostSold = async (req, res) => {
   const skip = (page - 1) * limit;
 
   const products = await prisma.product.findMany({
+    where: { businessId: req.user.businessId },
     include: {
       saleItems: { select: { quantity: true } },
     },
@@ -122,6 +126,7 @@ exports.leastSold = async (req, res) => {
   const skip = (page - 1) * limit;
 
   const products = await prisma.product.findMany({
+    where: { businessId: req.user.businessId },
     include: {
       saleItems: { select: { quantity: true } },
     },
@@ -145,9 +150,9 @@ exports.leastSold = async (req, res) => {
   });
 };
 
-exports.lowStock = async (_req, res) => {
+exports.lowStock = async (req, res) => {
   const products = await prisma.product.findMany({
-    where: { stock: { lte: 10 } },
+    where: { businessId: req.user.businessId, stock: { lte: 10 } },
     orderBy: { stock: 'asc' },
   });
 
@@ -157,9 +162,9 @@ exports.lowStock = async (_req, res) => {
   });
 };
 
-exports.deadStock = async (_req, res) => {
+exports.deadStock = async (req, res) => {
   const products = await prisma.product.findMany({
-    where: { saleItems: { none: {} } },
+    where: { businessId: req.user.businessId, saleItems: { none: {} } },
     orderBy: { createdAt: 'desc' },
   });
 

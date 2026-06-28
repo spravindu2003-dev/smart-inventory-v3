@@ -6,7 +6,7 @@ const asyncHandler = require('../utils/asyncHandler');
 exports.getMe = async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, username: true, email: true, firstName: true, lastName: true, role: true, isActive: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
   });
   if (!user) return res.status(404).json({ message: 'User not found' });
   res.json({ user });
@@ -18,11 +18,11 @@ exports.getAll = async (req, res) => {
   const search = req.query.search || '';
   const roleFilter = req.query.role || '';
 
-  const where = { deletedAt: null };
+  const where = { isDeleted: false, businessId: req.user.businessId };
 
   if (search) {
     where.OR = [
-      { username: { contains: search, mode: 'insensitive' } },
+      { name: { contains: search, mode: 'insensitive' } },
       { email: { contains: search, mode: 'insensitive' } },
     ];
   }
@@ -39,10 +39,8 @@ exports.getAll = async (req, res) => {
       take: limit,
       select: {
         id: true,
-        username: true,
+        name: true,
         email: true,
-        firstName: true,
-        lastName: true,
         role: true,
         isActive: true,
         createdAt: true,
@@ -59,92 +57,54 @@ exports.getAll = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
-  const { username, email, password, firstName, lastName, role } = req.body;
+  const { name, email, password, role } = req.body;
 
-  console.log('========================================');
-  console.log('[USER_CREATE] === ENTER ===');
-  console.log('[USER_CREATE] Request body:', JSON.stringify(req.body));
-  console.log('[USER_CREATE] Authenticated user:', JSON.stringify(req.user));
-  console.log('[USER_CREATE] Auth user role:', req.user?.role);
-
-  const trimmedRole = (role || '').trim().toLowerCase();
-  console.log('[USER_CREATE] Raw role value:', JSON.stringify(role));
-  console.log('[USER_CREATE] Trimmed+lowercased role:', trimmedRole);
-
-  if (!username || !email || !password || !role) {
-    console.log('[USER_CREATE] FAIL: Missing required fields');
-    console.log('[USER_CREATE]   username:', !!username, 'email:', !!email, 'password:', !!password, 'role:', !!role);
-    console.log('========================================');
-    return res.status(400).json({ message: 'All fields are required: username, email, password, role' });
+  if (!name || !email || !password || !role) {
+    return res.status(400).json({ message: 'All fields are required: name, email, password, role' });
   }
 
   if (!['manager', 'cashier'].includes(role)) {
-    console.log('[USER_CREATE] FAIL: Invalid role value:', role);
-    console.log('[USER_CREATE]   Expected one of: manager, cashier');
-    console.log('========================================');
     return res.status(400).json({ message: 'Role must be manager or cashier' });
   }
 
   if (password.length < 6) {
-    console.log('[USER_CREATE] FAIL: Password too short (length:', password.length, ')');
-    console.log('========================================');
     return res.status(400).json({ message: 'Password must be at least 6 characters' });
   }
 
-  const existing = await prisma.user.findFirst({
-    where: { OR: [{ username }, { email }] },
-  });
+  const existing = await prisma.user.findUnique({ where: { email } });
 
   if (existing) {
-    console.log('[USER_CREATE] FAIL: Duplicate username or email:', { username, email, existingId: existing.id });
-    console.log('========================================');
-    return res.status(409).json({ message: 'Username or email already exists' });
+    return res.status(409).json({ message: 'Email already exists' });
   }
 
-  console.log('[USER_CREATE] Validation passed, hashing password...');
   const hashedPassword = await bcrypt.hash(password, 12);
-  console.log('[USER_CREATE] Password hashed successfully');
 
-  console.log('[USER_CREATE] Creating user with data:', JSON.stringify({
-    username, email, firstName: firstName || null, lastName: lastName || null, role,
-  }));
-
-  let user;
-  try {
-    user = await prisma.user.create({
-      data: {
-        username,
-        email,
-        password: hashedPassword,
-        firstName: firstName || null,
-        lastName: lastName || null,
-        role,
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
-  } catch (prismaErr) {
-    console.log('[USER_CREATE] FAIL: Prisma error:', prismaErr.name, prismaErr.code, prismaErr.message);
-    console.log('========================================');
-    throw prismaErr;
-  }
-
-  console.log('[USER_CREATE] OK: User created:', JSON.stringify(user));
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      businessId: req.user.businessId,
+      createdById: req.user.id,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      isActive: true,
+      createdAt: true,
+    },
+  });
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'USER_CREATED',
     entity: 'User',
     entityId: user.id,
-    description: `Created user ${username} as ${role}`,
+    description: `Created user ${name} as ${role}`,
   });
 
   res.status(201).json({ user });
@@ -152,10 +112,10 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   const id = Number(req.params.id);
-  const { firstName, lastName, email, role } = req.body;
+  const { name, email, role } = req.body;
 
-  const existing = await prisma.user.findUnique({ where: { id } });
-  if (!existing || existing.deletedAt) {
+  const existing = await prisma.user.findFirst({ where: { id, businessId: req.user.businessId } });
+  if (!existing || existing.isDeleted) {
     return res.status(404).json({ message: 'User not found' });
   }
 
@@ -171,17 +131,14 @@ exports.update = async (req, res) => {
   const user = await prisma.user.update({
     where: { id },
     data: {
-      firstName: firstName !== undefined ? firstName : existing.firstName,
-      lastName: lastName !== undefined ? lastName : existing.lastName,
+      name: name ?? existing.name,
       email: email ?? existing.email,
       role: role ?? existing.role,
     },
     select: {
       id: true,
-      username: true,
+      name: true,
       email: true,
-      firstName: true,
-      lastName: true,
       role: true,
       isActive: true,
       createdAt: true,
@@ -190,10 +147,11 @@ exports.update = async (req, res) => {
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'USER_UPDATED',
     entity: 'User',
     entityId: id,
-    description: `Updated user ${user.username}`,
+    description: `Updated user ${user.name}`,
   });
 
   res.json({ user });
@@ -202,8 +160,8 @@ exports.update = async (req, res) => {
 exports.toggleStatus = async (req, res) => {
   const id = Number(req.params.id);
 
-  const existing = await prisma.user.findUnique({ where: { id } });
-  if (!existing || existing.deletedAt) {
+  const existing = await prisma.user.findFirst({ where: { id, businessId: req.user.businessId } });
+  if (!existing || existing.isDeleted) {
     return res.status(404).json({ message: 'User not found' });
   }
 
@@ -216,7 +174,7 @@ exports.toggleStatus = async (req, res) => {
     data: { isActive: !existing.isActive },
     select: {
       id: true,
-      username: true,
+      name: true,
       email: true,
       role: true,
       isActive: true,
@@ -226,10 +184,11 @@ exports.toggleStatus = async (req, res) => {
   const action = user.isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED';
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action,
     entity: 'User',
     entityId: id,
-    description: `${user.isActive ? 'Activated' : 'Deactivated'} user ${user.username}`,
+    description: `${user.isActive ? 'Activated' : 'Deactivated'} user ${user.name}`,
   });
 
   res.json({ user });
@@ -238,8 +197,8 @@ exports.toggleStatus = async (req, res) => {
 exports.remove = async (req, res) => {
   const id = Number(req.params.id);
 
-  const existing = await prisma.user.findUnique({ where: { id } });
-  if (!existing || existing.deletedAt) {
+  const existing = await prisma.user.findFirst({ where: { id, businessId: req.user.businessId } });
+  if (!existing || existing.isDeleted) {
     return res.status(404).json({ message: 'User not found' });
   }
 
@@ -249,22 +208,23 @@ exports.remove = async (req, res) => {
 
   await prisma.user.update({
     where: { id },
-    data: { deletedAt: new Date(), isActive: false },
+    data: { isDeleted: true, isActive: false, deletedAt: new Date() },
   });
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'DELETE_USER',
     entity: 'User',
     entityId: id,
-    description: `Deleted user ${existing.username}`,
+    description: `Deleted user ${existing.name}`,
   });
 
   res.json({ message: 'User deleted' });
 };
 
 exports.updateMe = async (req, res) => {
-  const { firstName, lastName, email } = req.body;
+  const { name, email } = req.body;
 
   const existing = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!existing) return res.status(404).json({ message: 'User not found' });
@@ -272,8 +232,7 @@ exports.updateMe = async (req, res) => {
   const updates = {};
   let emailChanged = false;
 
-  if (firstName !== undefined) updates.firstName = firstName || null;
-  if (lastName !== undefined) updates.lastName = lastName || null;
+  if (name !== undefined) updates.name = name;
 
   if (email !== undefined && email !== existing.email) {
     const dup = await prisma.user.findUnique({ where: { email } });
@@ -291,10 +250,8 @@ exports.updateMe = async (req, res) => {
     data: updates,
     select: {
       id: true,
-      username: true,
+      name: true,
       email: true,
-      firstName: true,
-      lastName: true,
       role: true,
       isActive: true,
     },
@@ -303,19 +260,21 @@ exports.updateMe = async (req, res) => {
   if (emailChanged) {
     await logAction({
       userId: req.user.id,
+      businessId: req.user.businessId,
       action: 'EMAIL_CHANGED',
       entity: 'User',
       entityId: req.user.id,
-      description: `User ${user.username} changed email to ${user.email}`,
+      description: `User ${user.name} changed email to ${user.email}`,
     });
   }
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'PROFILE_UPDATED',
     entity: 'User',
     entityId: req.user.id,
-    description: `User ${user.username} updated profile`,
+    description: `User ${user.name} updated profile`,
   });
 
   res.json({ user });

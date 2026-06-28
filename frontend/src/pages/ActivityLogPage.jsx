@@ -133,7 +133,7 @@ export default function ActivityLogPage() {
         <input
           className="filters-bar__input"
           type="text"
-          placeholder="Search username, action, description..."
+          placeholder="Search name, action, description..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -199,7 +199,7 @@ export default function ActivityLogPage() {
                     </span>
                   </td>
                   <td>{a.description || '\u2014'}</td>
-                  <td>{a.user?.username || 'System'}</td>
+                  <td>{a.user?.name || 'System'}</td>
                   <td className="table__date">
                     {new Date(a.createdAt).toLocaleString()}
                   </td>

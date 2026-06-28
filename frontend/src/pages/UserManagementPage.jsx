@@ -11,7 +11,7 @@ import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
 
-const emptyForm = { username: '', email: '', password: '', firstName: '', lastName: '', role: 'cashier' };
+const emptyForm = { name: '', email: '', password: '', role: 'cashier' };
 
 const roleOptions = [
   { value: 'manager', label: 'Manager' },
@@ -24,9 +24,9 @@ const editRoleOptions = [
   { value: 'cashier', label: 'Cashier' },
 ];
 
-function validateUsername(val) {
-  if (!val || !val.trim()) return 'Username is required';
-  if (val.trim().length < 3) return 'Username must be at least 3 characters';
+function validateName(val) {
+  if (!val || !val.trim()) return 'Name is required';
+  if (val.trim().length < 2) return 'Name must be at least 2 characters';
   return null;
 }
 
@@ -39,7 +39,6 @@ function validateEmail(val) {
 function validatePassword(val) {
   if (!val) return 'Password is required';
   if (val.length < 6) return 'Password must be at least 6 characters';
-  if (!/[a-zA-Z]/.test(val) || !/[0-9]/.test(val)) return 'Password must include letters and numbers';
   return null;
 }
 
@@ -49,7 +48,7 @@ function validateRole(val) {
 }
 
 function validateField(field, value) {
-  if (field === 'username') return validateUsername(value);
+  if (field === 'name') return validateName(value);
   if (field === 'email') return validateEmail(value);
   if (field === 'password') return validatePassword(value);
   if (field === 'role') return validateRole(value);
@@ -108,11 +107,9 @@ export default function UserManagementPage() {
   function openEdit(user) {
     setEditing(user);
     setForm({
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
+      name: user.name || '',
       email: user.email,
       role: user.role,
-      username: user.username,
       password: '',
     });
     setFieldErrors({});
@@ -139,7 +136,7 @@ export default function UserManagementPage() {
   }, []);
 
   function runValidation() {
-    const fields = editing ? ['email', 'role'] : ['username', 'email', 'password', 'role'];
+    const fields = editing ? ['email', 'role'] : ['name', 'email', 'password', 'role'];
     const errs = {};
     fields.forEach((f) => {
       const err = validateField(f, form[f]);
@@ -158,16 +155,13 @@ export default function UserManagementPage() {
     if (Object.keys(errs).length > 0) return;
 
     const payload = editing ? {
-      firstName: form.firstName || null,
-      lastName: form.lastName || null,
+      name: form.name,
       email: form.email,
       role: form.role,
     } : {
-      username: form.username,
+      name: form.name,
       email: form.email,
       password: form.password,
-      firstName: form.firstName || null,
-      lastName: form.lastName || null,
       role: form.role,
     };
 
@@ -192,10 +186,7 @@ export default function UserManagementPage() {
         setTouched((p) => ({ ...p, ...allTouch }));
       } else if (err.response?.status === 409) {
         const msg = (err.response?.data?.message || '').toLowerCase();
-        if (msg.includes('username')) {
-          setFieldErrors((p) => ({ ...p, username: 'This username is already taken' }));
-          setTouched((p) => ({ ...p, username: true }));
-        } else if (msg.includes('email')) {
+        if (msg.includes('email')) {
           setFieldErrors((p) => ({ ...p, email: 'This email is already registered' }));
           setTouched((p) => ({ ...p, email: true }));
         } else {
@@ -236,7 +227,7 @@ export default function UserManagementPage() {
   }
 
   const formValid = !editing
-    ? ['username', 'email', 'password', 'role'].every((f) => !validateField(f, form[f]))
+    ? ['name', 'email', 'password', 'role'].every((f) => !validateField(f, form[f]))
     : ['email', 'role'].every((f) => !validateField(f, form[f]));
 
   if (loading && users.length === 0) {
@@ -272,7 +263,7 @@ export default function UserManagementPage() {
         <input
           className="filters-bar__input"
           type="text"
-          placeholder="Search username or email..."
+          placeholder="Search name or email..."
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
         />
@@ -287,9 +278,8 @@ export default function UserManagementPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>Username</th>
-              <th>Email</th>
               <th>Name</th>
+              <th>Email</th>
               <th>Role</th>
               <th>Status</th>
               <th style={{ width: 180 }}>Actions</th>
@@ -298,16 +288,15 @@ export default function UserManagementPage() {
           <tbody>
             {safeArray(users).length === 0 && (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={5}>
                   <EmptyState message="No users found" />
                 </td>
               </tr>
             )}
             {safeArray(users).map((u) => (
               <tr key={u.id}>
-                <td><strong>{u.username}</strong></td>
+                <td><strong>{u.name}</strong></td>
                 <td>{u.email}</td>
-                <td>{(u.firstName || u.lastName) ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : '\u2014'}</td>
                 <td><Badge variant="role">{u.role}</Badge></td>
                 <td>
                   <Badge variant={u.isActive ? 'ok' : 'danger'}>
@@ -370,10 +359,10 @@ export default function UserManagementPage() {
           {!editing && (
             <>
               <Input
-                label="Username"
-                value={form.username}
-                onChange={setField('username')}
-                error={touched.username ? fieldErrors.username : undefined}
+                label="Name"
+                value={form.name}
+                onChange={setField('name')}
+                error={touched.name ? fieldErrors.name : undefined}
                 required
               />
               <Input
@@ -394,10 +383,6 @@ export default function UserManagementPage() {
             error={touched.email ? fieldErrors.email : undefined}
             required
           />
-          <div className="form-row">
-            <Input label="First Name" value={form.firstName} onChange={setField('firstName')} />
-            <Input label="Last Name" value={form.lastName} onChange={setField('lastName')} />
-          </div>
           {!editing && (
             <Select
               label="Role"
@@ -434,7 +419,7 @@ export default function UserManagementPage() {
         }
       >
         <div className="confirm-modal">
-          <p>Delete user <strong>{deleteTarget?.username}</strong>?</p>
+          <p>Delete user <strong>{deleteTarget?.name}</strong>?</p>
           <p className="confirm-modal__detail">
             This will soft-delete the account. The user will no longer be able to log in.
           </p>

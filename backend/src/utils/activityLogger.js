@@ -1,8 +1,8 @@
 const prisma = require('./prisma');
 
-async function logAction({ userId, action, entity, entityId, description }) {
+async function logAction({ userId, businessId, action, entity, entityId, description }) {
   return prisma.activityLog.create({
-    data: { userId, action, entity, entityId, description },
+    data: { userId, businessId, action, entity, entityId, description },
   });
 }
 

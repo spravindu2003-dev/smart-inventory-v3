@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const { loading, run } = useFetch();
 
   const [profile, setProfile] = useState(null);
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '' });
+  const [form, setForm] = useState({ name: '', email: '' });
   const [saving, setSaving] = useState(false);
 
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -26,8 +26,7 @@ export default function SettingsPage() {
       const res = await getMyProfile(signal);
       setProfile(res.data);
       setForm({
-        firstName: res.data?.firstName || '',
-        lastName: res.data?.lastName || '',
+        name: res.data?.name || '',
         email: res.data?.email || '',
       });
     });
@@ -38,8 +37,7 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       const res = await updateMyProfile({
-        firstName: form.firstName || null,
-        lastName: form.lastName || null,
+        name: form.name,
         email: form.email,
       });
       setProfile(res.data);
@@ -93,10 +91,7 @@ export default function SettingsPage() {
         <Card className="rpt-card--wide">
           <h3 className="rpt-card__title">Profile Information</h3>
           <form onSubmit={handleProfileSave}>
-            <div className="form-row">
-              <Input label="First Name" value={form.firstName} onChange={setField('firstName')} />
-              <Input label="Last Name" value={form.lastName} onChange={setField('lastName')} />
-            </div>
+            <Input label="Full Name" value={form.name} onChange={setField('name')} required />
             <Input label="Email" type="email" value={form.email} onChange={setField('email')} required />
             <div style={{ marginTop: '1rem' }}>
               <Button type="submit" loading={saving}>
@@ -146,8 +141,8 @@ export default function SettingsPage() {
           <h3 className="rpt-card__title">Account Details</h3>
           <div className="rpt-insights">
             <div className="rpt-insight">
-              <span className="rpt-insight__label">Username</span>
-              <span className="rpt-insight__value">{user?.username}</span>
+              <span className="rpt-insight__label">Name</span>
+              <span className="rpt-insight__value">{user?.name}</span>
             </div>
             <div className="rpt-insight">
               <span className="rpt-insight__label">Role</span>

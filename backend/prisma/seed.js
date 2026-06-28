@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   const existing = await prisma.user.findUnique({
-    where: { username: 'admin' },
+    where: { email: 'admin@smartinventory.com' },
   });
 
   if (existing) {
@@ -15,16 +15,28 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash('admin123', 12);
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
-      username: 'admin',
+      name: 'Admin',
       email: 'admin@smartinventory.com',
       password: hashedPassword,
       role: 'owner',
     },
   });
 
-  console.log('Default admin user created');
+  const business = await prisma.business.create({
+    data: {
+      name: "Admin's Business",
+      ownerId: user.id,
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { businessId: business.id },
+  });
+
+  console.log('Default admin user created with business');
 }
 
 main()

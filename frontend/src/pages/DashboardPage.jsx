@@ -23,7 +23,7 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
-function GuidedEmptyState({ username, onStartOnboarding }) {
+function GuidedEmptyState({ name, onStartOnboarding }) {
   return (
     <div>
       <div className="page-header">
@@ -33,7 +33,7 @@ function GuidedEmptyState({ username, onStartOnboarding }) {
 
       <Card className="welcome-card">
         <div className="welcome-card__content">
-          <h3>Hello, {username}</h3>
+          <h3>Hello, {name}</h3>
           <p className="welcome-card__meta">
             Your dashboard is empty because you haven&rsquo;t added any data yet.
           </p>
@@ -258,7 +258,7 @@ export default function DashboardPage() {
     return (
       <div>
         <GuidedEmptyState
-          username={user?.username}
+          name={user?.name}
           onStartOnboarding={() => onboarding.resumeOnboarding()}
         />
       </div>
@@ -270,7 +270,7 @@ export default function DashboardPage() {
     return (
       <div>
         <GuidedEmptyState
-          username={user?.username}
+          name={user?.name}
           onStartOnboarding={() => {
             if (ownerNotStarted) {
               onboarding.startOnboarding();
@@ -296,7 +296,7 @@ export default function DashboardPage() {
 
       <Card className="welcome-card">
         <div className="welcome-card__content">
-          <h3>Welcome, {user?.username}</h3>
+          <h3>Welcome, {user?.name}</h3>
           <p className="welcome-card__meta">
             <span className="badge badge--role">{user?.role}</span>
             <span>{user?.email}</span>
@@ -357,7 +357,7 @@ export default function DashboardPage() {
                       <td><strong>#{s.id}</strong></td>
                       <td>${Number(s.total).toFixed(2)}</td>
                       <td className="table__date">{timeAgo(s.createdAt)}</td>
-                      <td>{s.user?.username || '\u2014'}</td>
+                      <td>{s.user?.name || '\u2014'}</td>
                       <td>{s.items?.length || 0}</td>
                     </tr>
                   ))}

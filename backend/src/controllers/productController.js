@@ -8,13 +8,16 @@ exports.getAll = async (req, res) => {
   const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
   const skip = (page - 1) * limit;
 
+  const whereProducts = { businessId: req.user.businessId };
+
   const [products, total] = await Promise.all([
     prisma.product.findMany({
+      where: whereProducts,
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.product.count(),
+    prisma.product.count({ where: whereProducts }),
   ]);
 
   res.json({
@@ -24,7 +27,7 @@ exports.getAll = async (req, res) => {
 };
 
 exports.getById = async (req, res) => {
-  const product = await prisma.product.findUnique({ where: { id: Number(req.params.id) } });
+  const product = await prisma.product.findFirst({ where: { id: Number(req.params.id), businessId: req.user.businessId } });
   if (!product) return res.status(404).json({ message: 'Product not found' });
   res.json({ product });
 };
@@ -35,7 +38,7 @@ exports.create = async (req, res) => {
 
   const { name, description, price, stock, sku, category, expiryDate } = req.body;
 
-  const existing = await prisma.product.findUnique({ where: { sku } });
+  const existing = await prisma.product.findFirst({ where: { sku, businessId: req.user.businessId } });
   if (existing) return res.status(409).json({ message: 'SKU already exists' });
 
   const product = await prisma.product.create({
@@ -47,11 +50,13 @@ exports.create = async (req, res) => {
       sku,
       category: category || null,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
+      businessId: req.user.businessId,
     },
   });
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'CREATE_PRODUCT',
     entity: 'Product',
     entityId: product.id,
@@ -68,11 +73,11 @@ exports.update = async (req, res) => {
   const id = Number(req.params.id);
   const { name, description, price, stock, sku, category, expiryDate } = req.body;
 
-  const existing = await prisma.product.findUnique({ where: { id } });
+  const existing = await prisma.product.findFirst({ where: { id, businessId: req.user.businessId } });
   if (!existing) return res.status(404).json({ message: 'Product not found' });
 
   if (sku && sku !== existing.sku) {
-    const dup = await prisma.product.findUnique({ where: { sku } });
+    const dup = await prisma.product.findFirst({ where: { sku, businessId: req.user.businessId } });
     if (dup) return res.status(409).json({ message: 'SKU already exists' });
   }
 
@@ -91,6 +96,7 @@ exports.update = async (req, res) => {
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'UPDATE_PRODUCT',
     entity: 'Product',
     entityId: product.id,
@@ -103,7 +109,7 @@ exports.update = async (req, res) => {
 exports.remove = async (req, res) => {
   const id = Number(req.params.id);
 
-  const existing = await prisma.product.findUnique({ where: { id } });
+  const existing = await prisma.product.findFirst({ where: { id, businessId: req.user.businessId } });
   if (!existing) return res.status(404).json({ message: 'Product not found' });
 
   await prisma.product.delete({ where: { id } });
@@ -115,7 +121,7 @@ exports.softRemove = async (req, res) => {
   const id = Number(req.params.id);
   const { removalReason } = req.body;
 
-  const existing = await prisma.product.findUnique({ where: { id } });
+  const existing = await prisma.product.findFirst({ where: { id, businessId: req.user.businessId } });
   if (!existing) return res.status(404).json({ message: 'Product not found' });
 
   const product = await prisma.product.update({
@@ -129,6 +135,7 @@ exports.softRemove = async (req, res) => {
 
   await logAction({
     userId: req.user.id,
+    businessId: req.user.businessId,
     action: 'REMOVE_PRODUCT',
     entity: 'Product',
     entityId: id,

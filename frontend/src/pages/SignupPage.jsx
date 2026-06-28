@@ -9,7 +9,7 @@ export default function SignupPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +24,7 @@ export default function SignupPage() {
     setError('');
     setSubmitting(true);
     try {
-      const res = await registerUser(username, email, password);
+      const res = await registerUser(name, email, password);
       toast.success(res.data.message || 'Account created successfully');
       navigate('/login');
     } catch (err) {
@@ -36,23 +36,23 @@ export default function SignupPage() {
   };
 
   return (
-    <AuthLayout title="Owner Onboarding" subtitle="Create your business account to get started">
+    <AuthLayout title="Create your account" subtitle="Register as an owner to get started">
       <form onSubmit={handleSubmit} className="auth-form">
         {error && <div className="alert alert--error">{error}</div>}
 
         <div className="input-field">
-          <label className="input-field__label">Username</label>
-          <input className="input-field__input" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} autoFocus />
+          <label className="input-field__label">Full Name</label>
+          <input className="input-field__input" type="text" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} autoFocus placeholder="John Doe" />
         </div>
 
         <div className="input-field">
           <label className="input-field__label">Email</label>
-          <input className="input-field__input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input className="input-field__input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" />
         </div>
 
         <div className="input-field">
           <label className="input-field__label">Password</label>
-          <input className="input-field__input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+          <input className="input-field__input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="At least 6 characters" />
         </div>
 
         <button type="submit" className="btn btn--primary" disabled={submitting}>

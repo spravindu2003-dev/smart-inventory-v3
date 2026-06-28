@@ -16,10 +16,8 @@ const loginLimiter = rateLimit({
 
 router.post(
   '/register',
-  authenticate,
-  authorize('owner'),
   [
-    body('username').trim().notEmpty().isLength({ min: 3 }),
+    body('name').trim().notEmpty().isLength({ min: 2 }),
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
   ],
