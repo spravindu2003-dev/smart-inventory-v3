@@ -76,6 +76,30 @@ exports.update = async (req, res) => {
   const existing = await prisma.product.findFirst({ where: { id, businessId: req.user.businessId } });
   if (!existing) return res.status(404).json({ message: 'Product not found' });
 
+  if (req.user.role === 'cashier') {
+    const payload = { name, description, price, stock, sku, category, expiryDate };
+    const request = await prisma.editRequest.create({
+      data: {
+        businessId: req.user.businessId,
+        requestedById: req.user.id,
+        targetType: 'product',
+        targetId: id,
+        actionType: 'UPDATE_PRODUCT',
+        payload: Object.fromEntries(Object.entries(payload).filter(([_, v]) => v !== undefined)),
+      },
+      include: { requestedBy: { select: { id: true, name: true } } },
+    });
+    await logAction({
+      userId: req.user.id,
+      businessId: req.user.businessId,
+      action: 'REQUEST_CREATED',
+      entity: 'Product',
+      entityId: id,
+      description: `${req.user.name} requested UPDATE_PRODUCT on ${existing.name}`,
+    });
+    return res.status(201).json({ request });
+  }
+
   if (sku && sku !== existing.sku) {
     const dup = await prisma.product.findFirst({ where: { sku, businessId: req.user.businessId } });
     if (dup) return res.status(409).json({ message: 'SKU already exists' });
@@ -112,6 +136,29 @@ exports.remove = async (req, res) => {
   const existing = await prisma.product.findFirst({ where: { id, businessId: req.user.businessId } });
   if (!existing) return res.status(404).json({ message: 'Product not found' });
 
+  if (req.user.role === 'cashier') {
+    const request = await prisma.editRequest.create({
+      data: {
+        businessId: req.user.businessId,
+        requestedById: req.user.id,
+        targetType: 'product',
+        targetId: id,
+        actionType: 'DELETE_PRODUCT',
+        payload: {},
+      },
+      include: { requestedBy: { select: { id: true, name: true } } },
+    });
+    await logAction({
+      userId: req.user.id,
+      businessId: req.user.businessId,
+      action: 'REQUEST_CREATED',
+      entity: 'Product',
+      entityId: id,
+      description: `${req.user.name} requested DELETE_PRODUCT on ${existing.name}`,
+    });
+    return res.status(201).json({ request });
+  }
+
   await prisma.product.delete({ where: { id } });
 
   res.json({ message: 'Product deleted' });
@@ -123,6 +170,29 @@ exports.softRemove = async (req, res) => {
 
   const existing = await prisma.product.findFirst({ where: { id, businessId: req.user.businessId } });
   if (!existing) return res.status(404).json({ message: 'Product not found' });
+
+  if (req.user.role === 'cashier') {
+    const request = await prisma.editRequest.create({
+      data: {
+        businessId: req.user.businessId,
+        requestedById: req.user.id,
+        targetType: 'product',
+        targetId: id,
+        actionType: 'REMOVE_PRODUCT',
+        payload: { removalReason: removalReason || null },
+      },
+      include: { requestedBy: { select: { id: true, name: true } } },
+    });
+    await logAction({
+      userId: req.user.id,
+      businessId: req.user.businessId,
+      action: 'REQUEST_CREATED',
+      entity: 'Product',
+      entityId: id,
+      description: `${req.user.name} requested REMOVE_PRODUCT on ${existing.name}`,
+    });
+    return res.status(201).json({ request });
+  }
 
   const product = await prisma.product.update({
     where: { id },

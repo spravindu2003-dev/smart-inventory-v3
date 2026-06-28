@@ -24,7 +24,8 @@ const removalOptions = [
 
 export default function ProductsPage() {
   const { user } = useAuth();
-  const canWrite = user?.role === 'owner' || user?.role === 'manager';
+  const isManager = user?.role === 'owner' || user?.role === 'manager';
+  const isCashier = user?.role === 'cashier';
   const formRef = useRef(null);
 
   const [products, setProducts] = useState([]);
@@ -87,8 +88,12 @@ export default function ProductsPage() {
         expiryDate: form.expiryDate || null,
       };
       if (editing) {
-        await productsApi.updateProduct(editing.id, payload);
-        toast.success('Product updated');
+        const res = await productsApi.updateProduct(editing.id, payload);
+        if (res.data.request) {
+          toast.success('Edit request sent to manager');
+        } else {
+          toast.success('Product updated');
+        }
       } else {
         await productsApi.createProduct(payload);
         toast.success('Product created');
@@ -115,16 +120,21 @@ export default function ProductsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
+      let res;
       if (removalReason) {
-        await productsApi.removeProduct(deleteTarget.id, removalReason);
+        res = await productsApi.removeProduct(deleteTarget.id, removalReason);
       } else {
-        await productsApi.deleteProduct(deleteTarget.id);
+        res = await productsApi.deleteProduct(deleteTarget.id);
       }
-      toast.success('Product removed');
+      if (res.data?.request) {
+        toast.success(isCashier ? 'Removal request sent to manager' : 'Product removed');
+      } else {
+        toast.success('Product removed');
+      }
       setDeleteTarget(null);
       emit(Events.PRODUCT_UPDATED, { id: deleteTarget.id });
-      const res = await productsApi.getProducts();
-      setProducts(getData(res));
+      const res2 = await productsApi.getProducts();
+      setProducts(getData(res2));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Delete failed');
     } finally {
@@ -177,11 +187,13 @@ export default function ProductsPage() {
     return true;
   });
 
+  const showActions = isManager || isCashier;
+
   return (
     <div>
       <div className="page-header">
         <h2 className="page-title">Products</h2>
-        {canWrite && (
+        {isManager && (
           <Button onClick={openCreate}>+ Add Product</Button>
         )}
       </div>
@@ -213,13 +225,13 @@ export default function ProductsPage() {
               <th>Category</th>
               <th>Expiry</th>
               <th>Status</th>
-              {canWrite && <th style={{ width: 100 }}>Actions</th>}
+              {showActions && <th style={{ width: 100 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={canWrite ? 8 : 7}>
+                <td colSpan={showActions ? 8 : 7}>
                   <EmptyState message={filter === 'removed' ? 'No removed products' : 'No products yet'} />
                 </td>
               </tr>
@@ -249,11 +261,15 @@ export default function ProductsPage() {
                     <Badge variant="ok">Active</Badge>
                   )}
                 </td>
-                {canWrite && (
+                {showActions && (
                   <td>
                     <div className="table__actions">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(p)} disabled={isRemoved}>Edit</Button>
-                      {!isRemoved && <Button size="sm" variant="danger" onClick={() => openDelete(p)}>Delete</Button>}
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(p)} disabled={isRemoved}>
+                        {isCashier ? 'Request Edit' : 'Edit'}
+                      </Button>
+                      {!isRemoved && <Button size="sm" variant="danger" onClick={() => openDelete(p)}>
+                        {isCashier ? 'Request Remove' : 'Delete'}
+                      </Button>}
                     </div>
                   </td>
                 )}
@@ -272,7 +288,7 @@ export default function ProductsPage() {
           <>
             <Button variant="ghost" onClick={() => { setModalOpen(false); setEditing(null); setForm(emptyForm); }}>Cancel</Button>
             <Button loading={saving} onClick={handleFormSubmit}>
-              {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+              {saving ? 'Saving...' : editing ? (isCashier ? 'Send Request' : 'Update') : 'Create'}
             </Button>
           </>
         }
@@ -301,13 +317,18 @@ export default function ProductsPage() {
           <>
             <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
             <Button variant="danger" loading={deleting} onClick={handleDelete}>
-              {deleting ? 'Removing...' : 'Remove'}
+              {deleting ? 'Removing...' : (isCashier ? 'Send Request' : 'Remove')}
             </Button>
           </>
         }
       >
         <div className="confirm-modal">
           <p>Remove <strong>{deleteTarget?.name}</strong> from inventory?</p>
+          {isCashier && (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+              This will send a removal request to your manager for approval.
+            </p>
+          )}
           <div style={{ marginTop: '0.75rem' }}>
             <Select
               label="Reason (optional)"

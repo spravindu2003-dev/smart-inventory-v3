@@ -27,8 +27,9 @@ model Business {
   users      User[]
   products   Product[]
   sales      Sale[]
-  activities ActivityLog[]
-  createdAt  DateTime      @default(now())
+  activities     ActivityLog[]
+  editRequests   EditRequest[]
+  createdAt      DateTime      @default(now())
 }
 
 model User {
@@ -47,8 +48,10 @@ model User {
   createdById Int?
   createdBy   User?         @relation("UserCreation", fields: [createdById], references: [id], onDelete: SetNull)
   createdUsers User[]       @relation("UserCreation")
-  ownedBusiness Business?   @relation("BusinessOwner")
-  createdAt   DateTime      @default(now())
+  ownedBusiness   Business?   @relation("BusinessOwner")
+  editRequests    EditRequest[] @relation("RequestedEdits")
+  reviewedRequests EditRequest[] @relation("ReviewedEdits")
+  createdAt       DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   sales       Sale[]
   SaleItem    SaleItem[]
@@ -111,4 +114,22 @@ model ActivityLog {
   businessId  Int
   business    Business @relation(fields: [businessId], references: [id])
   createdAt   DateTime @default(now())
+}
+
+model EditRequest {
+  id            Int      @id @default(autoincrement())
+  businessId    Int
+  business      Business @relation(fields: [businessId], references: [id])
+  requestedById Int
+  requestedBy   User     @relation("RequestedEdits", fields: [requestedById], references: [id])
+  targetType    String
+  targetId      Int
+  actionType    String
+  payload       Json
+  status        String   @default("PENDING")
+  message       String?
+  reviewedById  Int?
+  reviewedBy    User?    @relation("ReviewedEdits", fields: [reviewedById], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

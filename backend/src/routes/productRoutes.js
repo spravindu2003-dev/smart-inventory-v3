@@ -24,7 +24,6 @@ router.post(
 
 router.put(
   '/:id',
-  authorize('owner', 'manager'),
   [
     body('name').optional().trim().notEmpty(),
     body('price').optional().isFloat({ min: 0 }),
@@ -34,11 +33,10 @@ router.put(
   ctrl.update
 );
 
-router.delete('/:id', authorize('owner', 'manager'), ctrl.remove);
+router.delete('/:id', ctrl.remove);
 
 router.patch(
   '/:id/remove',
-  authorize('owner', 'manager'),
   [body('removalReason').isIn(['expired', 'damaged', 'low_demand']).optional()],
   ctrl.softRemove
 );

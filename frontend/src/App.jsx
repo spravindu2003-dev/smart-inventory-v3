@@ -35,6 +35,7 @@ import ActivityLogPage from './pages/ActivityLogPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import UserManagementPage from './pages/UserManagementPage';
+import RequestsPage from './pages/RequestsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function LoadingScreen() {
@@ -78,6 +79,7 @@ function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="users" element={<ProtectedRoute roles={['owner']}><UserManagementPage /></ProtectedRoute>} />
+        <Route path="requests" element={<ProtectedRoute roles={['owner', 'manager']}><RequestsPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 

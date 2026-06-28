@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getRequestCount } from '../api/requests';
 
 export default function Topbar({ onCmdOpen }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -15,6 +17,32 @@ export default function Topbar({ onCmdOpen }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  useEffect(() => {
+    if (!user || (user.role !== 'owner' && user.role !== 'manager')) return;
+
+    const ctrl = new AbortController();
+    let active = true;
+
+    async function poll() {
+      try {
+        const res = await getRequestCount(ctrl.signal);
+        if (active) setPendingCount(res.data.count || 0);
+      } catch {
+        // ignore
+      }
+    }
+
+    poll();
+    const interval = setInterval(poll, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      ctrl.abort();
+    };
+  }, [user]);
+
+  const showBadge = (user?.role === 'owner' || user?.role === 'manager') && pendingCount > 0;
 
   return (
     <header className="topbar">
@@ -29,6 +57,16 @@ export default function Topbar({ onCmdOpen }) {
       </button>
       <div className="topbar__spacer" />
       <div className="topbar__user" ref={ref}>
+        {showBadge && (
+          <button
+            className="topbar__badge-btn"
+            onClick={() => navigate('/dashboard/requests')}
+            title="Pending requests"
+          >
+            <span className="topbar__badge-icon">{'\u2709'}</span>
+            <span className="topbar__badge-count">{pendingCount}</span>
+          </button>
+        )}
         <button
           className="topbar__avatar"
           onClick={() => setMenuOpen((p) => !p)}

@@ -15,6 +15,7 @@ const links = [
   { to: '/dashboard/products', label: 'Products', icon: '\u2630', roles: ['owner', 'manager', 'cashier'] },
   { to: '/dashboard/sales', label: 'Sales', icon: '\u2637', roles: ['owner', 'manager', 'cashier'] },
   { to: '/dashboard/insights', label: 'Insights', icon: '\u2606', roles: ['owner', 'manager'] },
+  { to: '/dashboard/requests', label: 'Requests', icon: '\u2709', roles: ['owner', 'manager'] },
   { to: '/dashboard/activities', label: 'Activity Log', icon: '\u2691', roles: ['owner', 'manager'] },
   { to: '/dashboard/reports', label: 'Reports', icon: '\u2261', roles: ['owner', 'manager', 'cashier'] },
   { to: '/dashboard/users', label: 'Users', icon: '\u263A', roles: ['owner'] },
